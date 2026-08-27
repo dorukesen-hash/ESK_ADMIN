@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+:root {
+	--background: #ffffff;
+	--foreground: #182434;
+}
+
+html, body {
+	min-height: 100%;
+}
+
+body {
+	color: var(--foreground);
+	background: var(--background);
+	font-family: var(--font-montserrat), Arial, Helvetica, sans-serif;
+	margin: 0;
+}
+
+.Toastify__toast {
+	background: white !important;
+	color: #182434 !important;
+	border-radius: 0 !important;
+}
+.Toastify__progress-bar {
+	background: #5CA0E2 !important;
+}
