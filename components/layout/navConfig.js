@@ -42,8 +42,9 @@ export const navSections = [
 		children: [
 			{ label: "Shipments", href: "/shipments" },
 			{ label: "Carriers", href: "/carriers" },
-			{ label: "Carrier Prices", href: "/carrier-prices" },
-			{ label: "Shipping Profiles", href: "/shipping-profiles" },
+			// Carrier Prices and Shipping Profiles dropped from this section - see
+			// Phase 3 Orders+Fulfillment PR notes for why (broken/incomplete backend
+			// for the former, customer-owned data for the latter, not admin-managed).
 		],
 	},
 	{
