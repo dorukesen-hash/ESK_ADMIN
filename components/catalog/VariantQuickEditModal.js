@@ -8,12 +8,28 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import FormField, { inputClass, checkboxClass } from "@/components/ui/FormField";
 
+// one_four_units/five_nine_units/ten_plus_units are INTEGER columns on Variant
+// (db/models/variant.js) - a decimal value (e.g. a price with cents) crashes the
+// PUT with a raw Postgres error (confirmed live: "invalid input syntax for type
+// integer"). Enforce whole numbers here rather than let the request 500.
 const schema = yup.object({
 	title: yup.string().required("Başlık zorunlu"),
 	stock: yup.string().nullable(),
-	one_four_units: yup.number().nullable().transform((v, orig) => (orig === "" ? null : v)),
-	five_nine_units: yup.number().nullable().transform((v, orig) => (orig === "" ? null : v)),
-	ten_plus_units: yup.number().nullable().transform((v, orig) => (orig === "" ? null : v)),
+	one_four_units: yup
+		.number()
+		.integer("Tam sayı olmalı")
+		.nullable()
+		.transform((v, orig) => (orig === "" ? null : v)),
+	five_nine_units: yup
+		.number()
+		.integer("Tam sayı olmalı")
+		.nullable()
+		.transform((v, orig) => (orig === "" ? null : v)),
+	ten_plus_units: yup
+		.number()
+		.integer("Tam sayı olmalı")
+		.nullable()
+		.transform((v, orig) => (orig === "" ? null : v)),
 	available: yup.boolean(),
 });
 
@@ -57,13 +73,13 @@ export default function VariantQuickEditModal({ open, onClose, variant, onSubmit
 
 				<div className="grid grid-cols-3 gap-3">
 					<FormField label="1-4 Adet" error={errors.one_four_units}>
-						<input type="number" step="0.01" {...register("one_four_units")} className={inputClass} />
+						<input type="number" step="1" {...register("one_four_units")} className={inputClass} />
 					</FormField>
 					<FormField label="5-9 Adet" error={errors.five_nine_units}>
-						<input type="number" step="0.01" {...register("five_nine_units")} className={inputClass} />
+						<input type="number" step="1" {...register("five_nine_units")} className={inputClass} />
 					</FormField>
 					<FormField label="10+ Adet" error={errors.ten_plus_units}>
-						<input type="number" step="0.01" {...register("ten_plus_units")} className={inputClass} />
+						<input type="number" step="1" {...register("ten_plus_units")} className={inputClass} />
 					</FormField>
 				</div>
 
