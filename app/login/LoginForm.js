@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const schema = yup.object({
 	email: yup.string().email("Geçerli bir e-posta girin").required("E-posta zorunlu"),
@@ -14,12 +16,21 @@ const schema = yup.object({
 
 export default function LoginForm() {
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const [serverError, setServerError] = useState("");
 	const {
 		register,
 		handleSubmit,
 		formState: { errors, isSubmitting },
 	} = useForm({ resolver: yupResolver(schema) });
+
+	// Already logged in (e.g. navigated back to /login manually) - bounce to the dashboard.
+	const { data: currentUser } = useCurrentUser();
+	useEffect(() => {
+		if (currentUser?.isAdmin === "admin") {
+			router.replace("/");
+		}
+	}, [currentUser, router]);
 
 	const onSubmit = async (values) => {
 		setServerError("");
@@ -29,8 +40,11 @@ export default function LoginForm() {
 				setServerError("Bu hesabın admin paneline erişim yetkisi yok.");
 				return;
 			}
+			// Clear the (likely cached-as-unauthenticated) currentUser query so
+			// AuthGuard on the dashboard doesn't briefly bounce back to /login
+			// on a stale cached result.
+			await queryClient.resetQueries({ queryKey: ["currentUser"] });
 			router.push("/");
-			router.refresh();
 		} catch (error) {
 			setServerError(error?.response?.data?.message || "Giriş başarısız.");
 		}
