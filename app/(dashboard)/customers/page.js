@@ -2,23 +2,30 @@
 
 import { useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
+import SearchInput from "@/components/ui/SearchInput";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
 import { useCustomers, PAGE_SIZE } from "@/hooks/customers/useCustomers";
 
 export default function CustomersPage() {
 	const [page, setPage] = useState(0);
-	const { data, isLoading } = useCustomers({ page });
+	const [search, setSearch] = useState("");
+	const { data, isLoading } = useCustomers({ page, search });
 	const customers = data?.rows ?? [];
 	const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
+
+	const handleSearch = (value) => {
+		setSearch(value);
+		setPage(0);
+	};
 
 	return (
 		<div>
 			<PageHeader title="Müşteriler" />
-			<p className="mb-4 text-sm text-text-light">
-				Arama şu anda backend&apos;deki bir hata nedeniyle devre dışı (getCustomers, boş olmayan bir
-				filtre gönderildiğinde 500 hatası veriyor).
-			</p>
+
+			<div className="mb-4">
+				<SearchInput value={search} onChange={handleSearch} placeholder="İsim, e-posta veya telefon ara..." />
+			</div>
 
 			<DataTable
 				isLoading={isLoading}
