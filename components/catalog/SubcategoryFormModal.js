@@ -27,6 +27,7 @@ export default function SubcategoryFormModal({
 	onClose,
 	categories,
 	initialValues,
+	defaultCategoryId,
 	onSubmit,
 	isLoading,
 }) {
@@ -58,12 +59,16 @@ export default function SubcategoryFormModal({
 		if (open) {
 			reset({
 				name: initialValues?.name ?? "",
-				categoryId: initialValues?.categoryId ? String(initialValues.categoryId) : "",
+				categoryId: initialValues?.categoryId
+					? String(initialValues.categoryId)
+					: defaultCategoryId
+					? String(defaultCategoryId)
+					: "",
 				description: "",
 				available: initialValues?.available ?? false,
 			});
 		}
-	}, [open, initialValues, reset]);
+	}, [open, initialValues, defaultCategoryId, reset]);
 
 	useEffect(() => {
 		if (existingDescription) {

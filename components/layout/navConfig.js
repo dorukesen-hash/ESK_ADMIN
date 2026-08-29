@@ -1,6 +1,7 @@
 import {
 	LayoutDashboard,
 	Boxes,
+	Star,
 	SlidersHorizontal,
 	ClipboardList,
 	Truck,
@@ -12,17 +13,13 @@ import {
 // flat "Products / Shipping / Order / Images / Customers" admin sidebar.
 export const navSections = [
 	{ label: "Dashboard", href: "/", icon: LayoutDashboard },
-	{
-		label: "Catalog",
-		icon: Boxes,
-		children: [
-			{ label: "Categories", href: "/catalog/categories" },
-			{ label: "Subcategories", href: "/catalog/subcategories" },
-			{ label: "Products", href: "/catalog/products" },
-			{ label: "Variants", href: "/catalog/variants" },
-			{ label: "Featured", href: "/catalog/featured" },
-		],
-	},
+	// Catalog: a single hierarchy-aware browser (breadcrumb drill-down through
+	// Category -> Subcategory/Product/Variant) replacing the four old flat
+	// list pages (Categories/Subcategories/Products/Variants), per the
+	// Catalog Hierarchy Redesign plan. Featured stays separate - it's a
+	// variant<->variant cross-link, unrelated to the tree.
+	{ label: "Catalog", href: "/catalog", icon: Boxes },
+	{ label: "Featured", href: "/catalog/featured", icon: Star },
 	{
 		label: "Catalog Attributes",
 		icon: SlidersHorizontal,

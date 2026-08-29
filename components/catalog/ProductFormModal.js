@@ -28,6 +28,8 @@ export default function ProductFormModal({
 	categories,
 	subcategories,
 	initialValues,
+	defaultCategoryId,
+	defaultSubcategoryId,
 	onSubmit,
 	isLoading,
 }) {
@@ -55,14 +57,22 @@ export default function ProductFormModal({
 		if (open) {
 			reset({
 				title: initialValues?.title ?? "",
-				categoryId: initialValues?.categoryId ? String(initialValues.categoryId) : "",
-				subcategoryId: initialValues?.subcategoryId ? String(initialValues.subcategoryId) : "",
+				categoryId: initialValues?.categoryId
+					? String(initialValues.categoryId)
+					: defaultCategoryId
+					? String(defaultCategoryId)
+					: "",
+				subcategoryId: initialValues?.subcategoryId
+					? String(initialValues.subcategoryId)
+					: defaultSubcategoryId
+					? String(defaultSubcategoryId)
+					: "",
 				description: initialValues?.description ?? "",
 				sku: initialValues?.sku ?? "",
 				available: initialValues?.available ?? false,
 			});
 		}
-	}, [open, initialValues, reset]);
+	}, [open, initialValues, defaultCategoryId, defaultSubcategoryId, reset]);
 
 	const selectedCategoryId = watch("categoryId");
 
