@@ -44,7 +44,9 @@ export default function ProductsPage() {
 	const handleSubmit = async (values) => {
 		try {
 			if (editingProduct) {
-				await updateProduct.mutateAsync({ id: editingProduct.id, ...values, variants: [] });
+				// Deliberately omitting `variants` - the API treats it as optional and
+				// leaves attached variants untouched; sending [] would delete them all.
+				await updateProduct.mutateAsync({ id: editingProduct.id, ...values });
 				notifySuccess("Ürün güncellendi.");
 			} else {
 				await createProduct.mutateAsync(values);

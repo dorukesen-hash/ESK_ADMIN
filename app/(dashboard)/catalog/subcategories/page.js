@@ -49,7 +49,8 @@ export default function SubcategoriesPage() {
 					description_id: values.description_id,
 					description: values.description,
 					desc2: { list_items: values.list_items },
-					variants: [],
+					// Deliberately omitting `variants` - the API treats it as optional and
+					// leaves attached variants untouched; sending [] would delete them all.
 				});
 				notifySuccess("Alt kategori güncellendi.");
 			} else {

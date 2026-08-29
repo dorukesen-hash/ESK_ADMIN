@@ -5,15 +5,17 @@ import api from "@/lib/api";
 
 const PAGE_SIZE = 10;
 
-export function useVariants({ page = 0, search = "" } = {}) {
+export function useVariants({ page = 0, search = "", categoryId, subcategoryId, productId, enabled = true } = {}) {
 	return useQuery({
-		queryKey: ["variants", page, search],
+		queryKey: ["variants", page, search, categoryId, subcategoryId, productId],
+		enabled,
 		queryFn: async () => {
 			// getVariantsForAdmin builds offset = parseInt(page) * limit using the raw
 			// (possibly undefined) limit, not the parsed one - always send both explicitly
-			// or the offset comes out NaN.
+			// or the offset comes out NaN. categoryId/subcategoryId scope to variants
+			// DIRECTLY attached at that level (the API excludes descendants server-side).
 			const { data } = await api.get("/admin/variant/", {
-				params: { page, limit: PAGE_SIZE, globalFilter: search },
+				params: { page, limit: PAGE_SIZE, globalFilter: search, categoryId, subcategoryId, productId },
 			});
 			const rows = data.rows ?? [];
 			// findAndCountAll includes a hasMany (VariantImages) without distinct: true,

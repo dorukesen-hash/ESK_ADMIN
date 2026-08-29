@@ -6,12 +6,15 @@ export default function DataTable({
 	getRowId,
 	isLoading = false,
 	emptyMessage = "Kayıt bulunamadı",
+	loadingMessage = "Yükleniyor...",
+	actionsLabel = "İşlemler",
 	actions,
+	onRowClick,
 }) {
 	if (isLoading) {
 		return (
 			<div className="bg-white p-8 text-center text-sm text-text-light shadow-custom">
-				Yükleniyor...
+				{loadingMessage}
 			</div>
 		);
 	}
@@ -36,20 +39,28 @@ export default function DataTable({
 						))}
 						{actions && (
 							<th className="whitespace-nowrap px-4 py-3 text-right font-semibold text-text-dark">
-								İşlemler
+								{actionsLabel}
 							</th>
 						)}
 					</tr>
 				</thead>
 				<tbody className="divide-y divide-border-gray">
 					{rows.map((row) => (
-						<tr key={getRowId(row)} className="hover:bg-custom-table-soft-blue">
+						<tr
+							key={getRowId(row)}
+							onClick={onRowClick ? () => onRowClick(row) : undefined}
+							className={`hover:bg-custom-table-soft-blue ${onRowClick ? "cursor-pointer" : ""}`}
+						>
 							{columns.map((col) => (
 								<td key={col.key} className="whitespace-nowrap px-4 py-3 text-text-dark">
 									{col.render ? col.render(row) : row[col.key]}
 								</td>
 							))}
-							{actions && <td className="whitespace-nowrap px-4 py-3 text-right">{actions(row)}</td>}
+							{actions && (
+								<td className="whitespace-nowrap px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+									{actions(row)}
+								</td>
+							)}
 						</tr>
 					))}
 				</tbody>

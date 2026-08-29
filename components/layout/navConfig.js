@@ -16,6 +16,11 @@ export const navSections = [
 		label: "Catalog",
 		icon: Boxes,
 		children: [
+			// New hierarchy-aware browser (breadcrumb drill-down through
+			// Category -> Subcategory/Product/Variant). The flat list pages below
+			// stay linked until this has been verified end-to-end, then this
+			// group collapses to just this entry + Featured (cutover step).
+			{ label: "Browse (New)", href: "/catalog" },
 			{ label: "Categories", href: "/catalog/categories" },
 			{ label: "Subcategories", href: "/catalog/subcategories" },
 			{ label: "Products", href: "/catalog/products" },
