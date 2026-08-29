@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import FormField, { selectClass, inputClass, textareaClass } from "@/components/ui/FormField";
 import {
 	useOrder,
+	useUpdateOrder,
 	useUpdateOrderStatus,
 	useCompleteOrder,
 	useUpdateOrderItemTracking,
@@ -25,12 +26,17 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const updateStatus = useUpdateOrderStatus();
 	const completeOrder = useCompleteOrder();
 	const updateItemNote = useUpdateOrderItemTracking();
+	const updateOrder = useUpdateOrder();
 
 	const [statusId, setStatusId] = useState("");
 	const [showComplete, setShowComplete] = useState(false);
 	const [carrierId, setCarrierId] = useState("");
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [itemNotes, setItemNotes] = useState({});
+	const [showAddressEdit, setShowAddressEdit] = useState(false);
+	const [shippingForm, setShippingForm] = useState({});
+	const [billingForm, setBillingForm] = useState({});
+	const [adminNote, setAdminNote] = useState("");
 
 	useEffect(() => {
 		if (order) {
@@ -41,6 +47,29 @@ export default function OrderDetailModal({ orderId, onClose }) {
 				notes[item.id] = item.note ?? "";
 			});
 			setItemNotes(notes);
+
+			setShippingForm({
+				name: order.name ?? "",
+				firstline: order.firstline ?? "",
+				secondline: order.secondline ?? "",
+				email: order.email ?? "",
+				phone: order.phone ?? "",
+				city: order.city ?? "",
+				state: order.state ?? "",
+				zip: order.zip ?? "",
+			});
+			setBillingForm({
+				id: order.billing?.id,
+				name: order.billing?.name ?? "",
+				firstline: order.billing?.firstline ?? "",
+				secondline: order.billing?.secondline ?? "",
+				phone: order.billing?.phone ?? "",
+				city: order.billing?.city ?? "",
+				state: order.billing?.state ?? "",
+				zip: order.billing?.zip ?? "",
+				email: order.billing?.extra_informations?.email ?? "",
+			});
+			setAdminNote(order.extra_informations?.adminNote ?? "");
 		}
 	}, [order]);
 
@@ -64,6 +93,31 @@ export default function OrderDetailModal({ orderId, onClose }) {
 			setShowComplete(false);
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "İşlem başarısız.");
+		}
+	};
+
+	const handleSaveAddress = async () => {
+		try {
+			await updateOrder.mutateAsync({
+				id: orderId,
+				shippingAddress: shippingForm,
+				billingAddress: {
+					id: billingForm.id,
+					name: billingForm.name,
+					firstline: billingForm.firstline,
+					secondline: billingForm.secondline,
+					phone: billingForm.phone,
+					city: billingForm.city,
+					state: billingForm.state,
+					zip: billingForm.zip,
+					extra_informations: { email: billingForm.email },
+				},
+				adminNote,
+			});
+			notifySuccess("Adres bilgileri güncellendi.");
+			setShowAddressEdit(false);
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "Güncellenemedi.");
 		}
 	};
 
@@ -96,7 +150,16 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							<p className="text-text-light">{order.customer?.email}</p>
 						</div>
 						<div>
-							<p className="text-text-light">Adres</p>
+							<div className="flex items-center justify-between">
+								<p className="text-text-light">Kargo Adresi</p>
+								<button
+									type="button"
+									onClick={() => setShowAddressEdit((v) => !v)}
+									className="text-xs text-custom-blue hover:underline"
+								>
+									{showAddressEdit ? "Kapat" : "Düzenle"}
+								</button>
+							</div>
 							<p className="text-text-dark">
 								{order.firstline} {order.secondline}
 							</p>
@@ -105,6 +168,149 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							</p>
 						</div>
 					</div>
+
+					{showAddressEdit && (
+						<div className="space-y-4 bg-custom-table-soft-blue p-4">
+							<div>
+								<p className="mb-2 text-sm font-medium text-text-dark">Kargo Adresi</p>
+								<div className="grid grid-cols-2 gap-3">
+									<FormField label="Ad Soyad">
+										<input
+											value={shippingForm.name ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, name: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="E-posta">
+										<input
+											value={shippingForm.email ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, email: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Telefon">
+										<input
+											value={shippingForm.phone ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, phone: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Adres Satırı 1">
+										<input
+											value={shippingForm.firstline ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, firstline: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Adres Satırı 2">
+										<input
+											value={shippingForm.secondline ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, secondline: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Şehir">
+										<input
+											value={shippingForm.city ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, city: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Eyalet">
+										<input
+											value={shippingForm.state ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, state: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Posta Kodu">
+										<input
+											value={shippingForm.zip ?? ""}
+											onChange={(e) => setShippingForm((f) => ({ ...f, zip: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+								</div>
+							</div>
+
+							<div>
+								<p className="mb-2 text-sm font-medium text-text-dark">Fatura Adresi</p>
+								<div className="grid grid-cols-2 gap-3">
+									<FormField label="Ad Soyad">
+										<input
+											value={billingForm.name ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, name: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="E-posta">
+										<input
+											value={billingForm.email ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, email: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Telefon">
+										<input
+											value={billingForm.phone ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, phone: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Adres Satırı 1">
+										<input
+											value={billingForm.firstline ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, firstline: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Adres Satırı 2">
+										<input
+											value={billingForm.secondline ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, secondline: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Şehir">
+										<input
+											value={billingForm.city ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, city: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Eyalet">
+										<input
+											value={billingForm.state ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, state: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+									<FormField label="Posta Kodu">
+										<input
+											value={billingForm.zip ?? ""}
+											onChange={(e) => setBillingForm((f) => ({ ...f, zip: e.target.value }))}
+											className={inputClass}
+										/>
+									</FormField>
+								</div>
+							</div>
+
+							<FormField label="Admin Notu">
+								<textarea
+									value={adminNote}
+									onChange={(e) => setAdminNote(e.target.value)}
+									rows={2}
+									className={textareaClass}
+								/>
+							</FormField>
+
+							<div className="flex justify-end">
+								<Button onClick={handleSaveAddress} isLoading={updateOrder.isPending}>
+									Adres Bilgilerini Kaydet
+								</Button>
+							</div>
+						</div>
+					)}
 
 					<div>
 						<p className="mb-2 text-sm font-medium text-text-dark">Ürünler</p>
