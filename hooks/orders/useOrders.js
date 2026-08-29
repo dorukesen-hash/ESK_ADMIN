@@ -32,6 +32,19 @@ export function useOrder(id) {
 	});
 }
 
+export function useUpdateOrder() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		// billingAddress is optional server-side - only send it when actually editing
+		// billing, so an admin-note-only save doesn't touch/create a Billing row.
+		mutationFn: ({ id, ...payload }) => api.put(`/admin/orders/${id}`, payload),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({ queryKey: ["orders"] });
+			queryClient.invalidateQueries({ queryKey: ["order", variables.id] });
+		},
+	});
+}
+
 export function useUpdateOrderStatus() {
 	const queryClient = useQueryClient();
 	return useMutation({
