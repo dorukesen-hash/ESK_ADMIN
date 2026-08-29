@@ -42,9 +42,11 @@ export const navSections = [
 		children: [
 			{ label: "Shipments", href: "/shipments" },
 			{ label: "Carriers", href: "/carriers" },
-			// Carrier Prices and Shipping Profiles dropped from this section - see
-			// Phase 3 Orders+Fulfillment PR notes for why (broken/incomplete backend
-			// for the former, customer-owned data for the latter, not admin-managed).
+			{ label: "Carrier Prices", href: "/carrier-prices" },
+			{ label: "Deci Ranges", href: "/deci" },
+			// Shipping Profiles still dropped from this section - see Phase 3
+			// Orders+Fulfillment PR notes (customer-owned data, not admin-managed
+			// in bulk). Phase 5.5 adds a per-customer view under Customers instead.
 		],
 	},
 	{
