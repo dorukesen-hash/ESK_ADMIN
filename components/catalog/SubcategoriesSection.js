@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import NextImage from "next/image";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import DataTable from "@/components/ui/DataTable";
 import Button from "@/components/ui/Button";
+
+const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
 
 // getSubCategoriesforAdmin already nests each subcategory's own `variants`
 // and `products` arrays, so the product count here is precise (direct-only,
@@ -14,11 +17,20 @@ import Button from "@/components/ui/Button";
 export default function SubcategoriesSection({ subcategories, isLoading, onSelect, onAdd, onEdit, onDelete }) {
 	const rows = useMemo(
 		() =>
-			subcategories.map((sub) => ({
-				...sub,
-				productCount: sub.products?.length ?? 0,
-				variantCount: sub.variants?.length ?? 0,
-			})),
+			subcategories.map((sub) => {
+				// subcategory_images (the real gallery) wins over the legacy single
+				// `imgurl` column - fall back to imgurl only when no gallery image exists.
+				// imgurl's exact format isn't confirmed (may already be absolute), so only
+				// prefix the CDN host onto a relative path.
+				const rawUrl = sub.subcategory_images?.[0]?.image?.url ?? sub.imgurl ?? null;
+				const thumbUrl = rawUrl ? (rawUrl.startsWith("http") ? rawUrl : `${CDN_URL}/${rawUrl}`) : null;
+				return {
+					...sub,
+					productCount: sub.products?.length ?? 0,
+					variantCount: sub.variants?.length ?? 0,
+					thumbUrl,
+				};
+			}),
 		[subcategories]
 	);
 
@@ -43,6 +55,18 @@ export default function SubcategoriesSection({ subcategories, isLoading, onSelec
 				actionsLabel="Actions"
 				onRowClick={(row) => onSelect(row)}
 				columns={[
+					{
+						key: "thumb",
+						header: "Image",
+						render: (row) =>
+							row.thumbUrl ? (
+								<div className="relative h-10 w-10 overflow-hidden border border-border-gray bg-button-gray">
+									<NextImage src={row.thumbUrl} alt="" fill sizes="40px" className="object-cover" />
+								</div>
+							) : (
+								<div className="h-10 w-10 border border-dashed border-border-gray" />
+							),
+					},
 					{ key: "name", header: "Subcategory Name" },
 					{ key: "productCount", header: "Products", render: (row) => `${row.productCount} products` },
 					{ key: "variantCount", header: "Variants", render: (row) => `${row.variantCount} variants` },
