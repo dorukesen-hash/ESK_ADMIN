@@ -25,6 +25,8 @@ export const VARIANT_FIELD_GROUPS = [
 			{ key: "available", label: "Available", type: "boolean" },
 			{ key: "description", label: "Description", type: "text" },
 			{ key: "unit", label: "Unit", type: "text" },
+			{ key: "featured", label: "Featured", type: "boolean" },
+			{ key: "featured_position", label: "Featured Position", type: "number" },
 		],
 	},
 	{
