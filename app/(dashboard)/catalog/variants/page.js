@@ -109,8 +109,15 @@ export default function VariantsGridPage() {
 	const visibleRowCount = table.getFilteredRowModel().rows.length;
 
 	return (
-		<div>
-			<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+		// h-full fills the dashboard main's actual remaining height (Topbar +
+		// main's own padding already accounted for by the flex chain) instead of
+		// a hand-guessed calc() - the toolbar row takes its natural height,
+		// the table area below (flex-1 min-h-0) takes exactly what's left, and
+		// min-w-0 throughout keeps a wide table scrolling INSIDE this page
+		// rather than blowing out the whole dashboard column (see the matching
+		// min-w-0 fix in app/(dashboard)/layout.js).
+		<div className="flex h-full min-w-0 flex-col">
+			<div className="mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
 				<div>
 					<h1 className="font-montserrat text-xl font-semibold text-text-dark">Variants</h1>
 					<p className="text-sm text-text-light">
@@ -126,7 +133,7 @@ export default function VariantsGridPage() {
 			{isLoading ? (
 				<div className="bg-white p-8 text-center text-sm text-text-light shadow-custom">Loading...</div>
 			) : (
-				<div className="overflow-auto bg-white shadow-custom" style={{ maxHeight: "calc(100vh - 220px)" }}>
+				<div className="min-h-0 w-full min-w-0 flex-1 overflow-auto bg-white shadow-custom">
 					<table className="border-collapse text-sm" style={{ width: table.getTotalSize() }}>
 						<thead className="sticky top-0 z-10">
 							{table.getHeaderGroups().map((headerGroup) => (
