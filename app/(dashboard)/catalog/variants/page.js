@@ -8,12 +8,15 @@ import {
 	getSortedRowModel,
 	flexRender,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, History, Table2 } from "lucide-react";
+import Button from "@/components/ui/Button";
 import { useAllVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
 import { ALL_VARIANT_FIELDS, DEFAULT_VISIBLE_KEYS } from "@/components/catalog/variantFieldConfig";
 import VariantGridCell from "@/components/catalog/VariantGridCell";
 import VariantColumnPicker from "@/components/catalog/VariantColumnPicker";
 import VariantLayoutMenu from "@/components/catalog/VariantLayoutMenu";
+import MassEditModal from "@/components/catalog/MassEditModal";
+import VariantHistoryModal from "@/components/catalog/VariantHistoryModal";
 import { notifyError } from "@/lib/toast";
 
 function buildInitialVisibility() {
@@ -40,11 +43,21 @@ const booleanFilterFn = (row, columnId, filterValue) => {
 
 export default function VariantsGridPage() {
 	const { data: variants = [], isLoading } = useAllVariants();
-	const updateField = useUpdateVariantField();
+	// Destructure just the stable mutateAsync function, not the whole mutation
+	// result object - useMutation() returns a NEW object every render (isPending
+	// etc. are render-time state) even though mutateAsync itself is memoized, so
+	// depending on the whole object below would recreate handleSave -> columns
+	// -> every header/cell render function on every render, tearing down and
+	// rebuilding the filter <input> DOM nodes and losing focus on each keystroke.
+	const { mutateAsync: saveVariantField } = useUpdateVariantField();
 
 	const [columnVisibility, setColumnVisibility] = useState(buildInitialVisibility);
 	const [columnFilters, setColumnFilters] = useState([]);
 	const [sorting, setSorting] = useState([]);
+	const [massEditOpen, setMassEditOpen] = useState(false);
+	const [historyVariant, setHistoryVariant] = useState(null);
+
+	const openHistory = useCallback((variant) => setHistoryVariant(variant), []);
 
 	// getVariantsForAdmin's Category/Subcategory/Product includes are unrestricted
 	// full associations - project down to just the names the grid shows.
@@ -62,13 +75,13 @@ export default function VariantsGridPage() {
 	const handleSave = useCallback(
 		async (id, field, value) => {
 			try {
-				await updateField.mutateAsync({ id, field, value });
+				await saveVariantField({ id, field, value });
 			} catch (error) {
 				notifyError(`Could not save "${field}".`);
 				throw error;
 			}
 		},
-		[updateField]
+		[saveVariantField]
 	);
 
 	const columns = useMemo(
@@ -77,21 +90,37 @@ export default function VariantsGridPage() {
 				accessorKey: field.key,
 				id: field.key,
 				header: (ctx) => <ColumnHeaderCell column={ctx.column} field={field} />,
-				cell: (ctx) =>
-					field.type === "readonly" ? (
-						<VariantGridCell value={ctx.getValue()} type="readonly" />
-					) : (
-						<VariantGridCell
-							value={ctx.getValue()}
-							type={field.type}
-							decimal={field.decimal}
-							onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
-						/>
-					),
+				cell: (ctx) => {
+					const editor =
+						field.type === "readonly" ? (
+							<VariantGridCell value={ctx.getValue()} type="readonly" />
+						) : (
+							<VariantGridCell
+								value={ctx.getValue()}
+								type={field.type}
+								decimal={field.decimal}
+								onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
+							/>
+						);
+					if (field.key !== "title") return editor;
+					return (
+						<div className="flex items-center">
+							<div className="min-w-0 flex-1">{editor}</div>
+							<button
+								type="button"
+								onClick={() => openHistory(ctx.row.original)}
+								title="History"
+								className="mr-1 flex-shrink-0 text-text-light hover:text-custom-blue"
+							>
+								<History size={14} />
+							</button>
+						</div>
+					);
+				},
 				filterFn: field.type === "boolean" ? booleanFilterFn : textFilterFn,
-				size: field.type === "boolean" ? 90 : field.key === "title" ? 260 : 150,
+				size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : 150,
 			})),
-		[handleSave]
+		[handleSave, openHistory]
 	);
 
 	const table = useReactTable({
@@ -109,13 +138,14 @@ export default function VariantsGridPage() {
 	const visibleRowCount = table.getFilteredRowModel().rows.length;
 
 	return (
-		// h-full fills the dashboard main's actual remaining height (Topbar +
-		// main's own padding already accounted for by the flex chain) instead of
-		// a hand-guessed calc() - the toolbar row takes its natural height,
-		// the table area below (flex-1 min-h-0) takes exactly what's left, and
-		// min-w-0 throughout keeps a wide table scrolling INSIDE this page
-		// rather than blowing out the whole dashboard column (see the matching
-		// min-w-0 fix in app/(dashboard)/layout.js).
+		<>
+		{/* h-full fills the dashboard main's actual remaining height (Topbar +
+		main's own padding already accounted for by the flex chain) instead of
+		a hand-guessed calc() - the toolbar row takes its natural height,
+		the table area below (flex-1 min-h-0) takes exactly what's left, and
+		min-w-0 throughout keeps a wide table scrolling INSIDE this page
+		rather than blowing out the whole dashboard column (see the matching
+		min-w-0 fix in app/(dashboard)/layout.js). */}
 		<div className="flex h-full min-w-0 flex-col">
 			<div className="mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
 				<div>
@@ -126,6 +156,11 @@ export default function VariantsGridPage() {
 				</div>
 				<div className="flex items-center gap-2">
 					<VariantLayoutMenu visibility={columnVisibility} onApply={setColumnVisibility} />
+					<Button variant="secondary" onClick={() => setMassEditOpen(true)}>
+						<span className="flex items-center gap-1.5">
+							<Table2 size={15} /> Mass Edit
+						</span>
+					</Button>
 					<VariantColumnPicker visibility={columnVisibility} onChange={setColumnVisibility} />
 				</div>
 			</div>
@@ -183,6 +218,14 @@ export default function VariantsGridPage() {
 				</div>
 			)}
 		</div>
+
+		<MassEditModal open={massEditOpen} onClose={() => setMassEditOpen(false)} />
+		<VariantHistoryModal
+			open={Boolean(historyVariant)}
+			onClose={() => setHistoryVariant(null)}
+			variant={historyVariant}
+		/>
+	</>
 	);
 }
 

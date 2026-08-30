@@ -98,4 +98,37 @@ export function useUploadVariantExcel() {
 	});
 }
 
+// Mass Edit: download the full catalog as Excel, edit offline, re-upload.
+export function useExportVariants() {
+	return useMutation({
+		mutationFn: async () => {
+			const { data } = await api.get("/admin/variant/export", { responseType: "blob" });
+			return data;
+		},
+	});
+}
+
+export function useBulkImportVariants() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (file) => {
+			const formData = new FormData();
+			formData.append("file", file);
+			return api.post("/admin/variant/bulk-import", formData);
+		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["variants-all"] }),
+	});
+}
+
+export function useVariantAuditLog(variantId) {
+	return useQuery({
+		queryKey: ["variant-audit-log", variantId],
+		queryFn: async () => {
+			const { data } = await api.get(`/admin/variant/${variantId}/audit-log`);
+			return data;
+		},
+		enabled: Boolean(variantId),
+	});
+}
+
 export { PAGE_SIZE };

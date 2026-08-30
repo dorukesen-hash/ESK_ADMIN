@@ -2,11 +2,18 @@
 // picker. Types drive both the cell editor and the header filter: "text" is a
 // plain input, "number" is a numeric input, "boolean" is a select (Yes/No/All
 // for filtering), "readonly" never gets an editor (system/derived columns).
-// Almost every "number" column is Postgres INTEGER - a non-integer value
-// crashes the PUT with a raw "invalid input syntax for type integer" error
-// (already true of VariantQuickEditModal's price-tier fields), so the grid
-// cell rounds before saving unless `decimal: true` (only distributor_pallet_FOB
-// is DECIMAL(10,2) per the model).
+//
+// Most "number" columns are Postgres INTEGER - a non-integer value crashes
+// the PUT with a raw "invalid input syntax for type integer" error, so the
+// grid cell rounds before saving unless `decimal: true`. The Sequelize model
+// (db/models/variant.js in ESK_API) declares most price/pack/pallet fields
+// INTEGER, but the REAL production schema disagrees for several - confirmed
+// live via information_schema.columns, not assumed: one_four_units,
+// five_nine_units, ten_plus_units, pallet_pricing, pack_weight/width/length/
+// height, and pallet_weight/width/length/height are all real NUMERIC(10,2)
+// columns. Rounding these would silently truncate real cents-precision data -
+// same class of model/DB drift already documented for the Claim model's
+// timestamp columns; mirrored in ESK_API's controller/variantExcelColumns.js.
 export const VARIANT_FIELD_GROUPS = [
 	{
 		id: "basic",
@@ -24,10 +31,10 @@ export const VARIANT_FIELD_GROUPS = [
 		id: "pricing",
 		label: "Pricing",
 		fields: [
-			{ key: "one_four_units", label: "1-4 Units", type: "number" },
-			{ key: "five_nine_units", label: "5-9 Units", type: "number" },
-			{ key: "ten_plus_units", label: "10+ Units", type: "number" },
-			{ key: "pallet_pricing", label: "Pallet Price", type: "number" },
+			{ key: "one_four_units", label: "1-4 Units", type: "number", decimal: true },
+			{ key: "five_nine_units", label: "5-9 Units", type: "number", decimal: true },
+			{ key: "ten_plus_units", label: "10+ Units", type: "number", decimal: true },
+			{ key: "pallet_pricing", label: "Pallet Price", type: "number", decimal: true },
 			{ key: "distributor_pallet_FOB", label: "Distributor Pallet FOB", type: "number", decimal: true },
 			{ key: "end_user_pallet", label: "End User Pallet", type: "number" },
 		],
@@ -72,10 +79,10 @@ export const VARIANT_FIELD_GROUPS = [
 		id: "packaging",
 		label: "Packaging",
 		fields: [
-			{ key: "pack_weight", label: "Pack Weight", type: "number" },
-			{ key: "pack_width", label: "Pack Width", type: "number" },
-			{ key: "pack_length", label: "Pack Length", type: "number" },
-			{ key: "pack_height", label: "Pack Height", type: "number" },
+			{ key: "pack_weight", label: "Pack Weight", type: "number", decimal: true },
+			{ key: "pack_width", label: "Pack Width", type: "number", decimal: true },
+			{ key: "pack_length", label: "Pack Length", type: "number", decimal: true },
+			{ key: "pack_height", label: "Pack Height", type: "number", decimal: true },
 			{ key: "quantity_case", label: "Qty per Case", type: "number" },
 			{ key: "package_weight_unit_of_measure", label: "Pack Weight UOM", type: "text" },
 			{ key: "package_height_unit_of_measure", label: "Pack Height UOM", type: "text" },
@@ -94,10 +101,10 @@ export const VARIANT_FIELD_GROUPS = [
 		label: "Pallet",
 		fields: [
 			{ key: "units_per_pallet", label: "Units per Pallet", type: "number" },
-			{ key: "pallet_width", label: "Pallet Width", type: "number" },
-			{ key: "pallet_length", label: "Pallet Length", type: "number" },
-			{ key: "pallet_height", label: "Pallet Height", type: "number" },
-			{ key: "pallet_weight", label: "Pallet Weight", type: "number" },
+			{ key: "pallet_width", label: "Pallet Width", type: "number", decimal: true },
+			{ key: "pallet_length", label: "Pallet Length", type: "number", decimal: true },
+			{ key: "pallet_height", label: "Pallet Height", type: "number", decimal: true },
+			{ key: "pallet_weight", label: "Pallet Weight", type: "number", decimal: true },
 			{ key: "pallet_width_unit_of_measure", label: "Pallet Width UOM", type: "text" },
 			{ key: "pallet_length_unit_of_measure", label: "Pallet Length UOM", type: "text" },
 			{ key: "pallet_height_unit_of_measure", label: "Pallet Height UOM", type: "text" },
