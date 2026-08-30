@@ -8,7 +8,7 @@ import {
 	getSortedRowModel,
 	flexRender,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, History, Table2 } from "lucide-react";
+import { ChevronUp, ChevronDown, History, Table2, Image as ImageIcon, PencilLine } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useAllVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
 import { ALL_VARIANT_FIELDS, DEFAULT_VISIBLE_KEYS } from "@/components/catalog/variantFieldConfig";
@@ -17,7 +17,16 @@ import VariantColumnPicker from "@/components/catalog/VariantColumnPicker";
 import VariantLayoutMenu from "@/components/catalog/VariantLayoutMenu";
 import MassEditModal from "@/components/catalog/MassEditModal";
 import VariantHistoryModal from "@/components/catalog/VariantHistoryModal";
+import BulkEditModal from "@/components/catalog/BulkEditModal";
+import NodeImagesModal from "@/components/catalog/NodeImagesModal";
 import { notifyError } from "@/lib/toast";
+
+const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+
+// Pinned columns, left to right - order matters (getStart('left') sums the
+// size of every pinned column BEFORE this one, so this array's order is what
+// actually determines each column's sticky offset).
+const PINNED_LEFT = ["select", "images", "title"];
 
 function buildInitialVisibility() {
 	const visibility = {};
@@ -41,6 +50,42 @@ const booleanFilterFn = (row, columnId, filterValue) => {
 	return filterValue === "yes" ? cellValue : !cellValue;
 };
 
+// Deliberately small and padding-light so this never becomes the tallest
+// thing in the row - a full-size thumbnail would grow every row to fit it.
+function VariantImageCell({ variant, onOpen }) {
+	const images = variant.variant_images ?? [];
+	const first = images[0]?.image;
+
+	return (
+		<button
+			type="button"
+			onClick={onOpen}
+			title="Manage images"
+			className="flex h-full w-full items-center justify-center gap-1 px-1.5 py-1"
+		>
+			{first ? (
+				// A fixed 20px thumbnail inside a dense table cell - next/image's
+				// fill mode needs a sized wrapper and adds overhead this doesn't need.
+				// eslint-disable-next-line @next/next/no-img-element
+				<img src={`${CDN_URL}/${first.url}`} alt="" className="h-5 w-5 flex-shrink-0 object-cover" />
+			) : (
+				<span className="flex h-5 w-5 flex-shrink-0 items-center justify-center border border-dashed border-border-gray text-text-light">
+					<ImageIcon size={11} />
+				</span>
+			)}
+			{images.length > 1 && <span className="text-[10px] text-text-light">+{images.length - 1}</span>}
+		</button>
+	);
+}
+
+// Common style for a pinned (sticky-left) header/cell - offset computed by
+// TanStack from the actual sizes of every pinned column before this one, not
+// hand-counted, so it stays correct if a pinned column's size ever changes.
+function pinnedStyle(column) {
+	if (!column.getIsPinned()) return {};
+	return { position: "sticky", left: column.getStart("left"), zIndex: column.getIsPinned() ? 2 : 1 };
+}
+
 export default function VariantsGridPage() {
 	const { data: variants = [], isLoading } = useAllVariants();
 	// Destructure just the stable mutateAsync function, not the whole mutation
@@ -54,10 +99,15 @@ export default function VariantsGridPage() {
 	const [columnVisibility, setColumnVisibility] = useState(buildInitialVisibility);
 	const [columnFilters, setColumnFilters] = useState([]);
 	const [sorting, setSorting] = useState([]);
+	const [columnSizing, setColumnSizing] = useState({});
+	const [rowSelection, setRowSelection] = useState({});
 	const [massEditOpen, setMassEditOpen] = useState(false);
+	const [bulkEditOpen, setBulkEditOpen] = useState(false);
 	const [historyVariant, setHistoryVariant] = useState(null);
+	const [imagesVariant, setImagesVariant] = useState(null);
 
 	const openHistory = useCallback((variant) => setHistoryVariant(variant), []);
+	const openImages = useCallback((variant) => setImagesVariant(variant), []);
 
 	// getVariantsForAdmin's Category/Subcategory/Product includes are unrestricted
 	// full associations - project down to just the names the grid shows.
@@ -84,58 +134,117 @@ export default function VariantsGridPage() {
 		[saveVariantField]
 	);
 
-	const columns = useMemo(
-		() =>
-			ALL_VARIANT_FIELDS.map((field) => ({
-				accessorKey: field.key,
-				id: field.key,
-				header: (ctx) => <ColumnHeaderCell column={ctx.column} field={field} />,
-				cell: (ctx) => {
-					const editor =
-						field.type === "readonly" ? (
-							<VariantGridCell value={ctx.getValue()} type="readonly" />
-						) : (
-							<VariantGridCell
-								value={ctx.getValue()}
-								type={field.type}
-								decimal={field.decimal}
-								onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
-							/>
-						);
-					if (field.key !== "title") return editor;
-					return (
-						<div className="flex items-center">
-							<div className="min-w-0 flex-1">{editor}</div>
-							<button
-								type="button"
-								onClick={() => openHistory(ctx.row.original)}
-								title="History"
-								className="mr-1 flex-shrink-0 text-text-light hover:text-custom-blue"
-							>
-								<History size={14} />
-							</button>
-						</div>
+	const columns = useMemo(() => {
+		const selectColumn = {
+			id: "select",
+			header: ({ table }) => (
+				<div className="flex h-full items-center justify-center px-2">
+					<input
+						type="checkbox"
+						checked={table.getIsAllRowsSelected()}
+						ref={(el) => {
+							if (el) el.indeterminate = table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected();
+						}}
+						onChange={table.getToggleAllRowsSelectedHandler()}
+						className="h-4 w-4 border-border-gray text-custom-blue focus:ring-custom-blue"
+					/>
+				</div>
+			),
+			cell: ({ row }) => (
+				<div className="flex h-full items-center justify-center px-2">
+					<input
+						type="checkbox"
+						checked={row.getIsSelected()}
+						onChange={row.getToggleSelectedHandler()}
+						className="h-4 w-4 border-border-gray text-custom-blue focus:ring-custom-blue"
+					/>
+				</div>
+			),
+			size: 40,
+			enableResizing: false,
+			enableSorting: false,
+		};
+
+		const imagesColumn = {
+			id: "images",
+			header: () => (
+				<div className="flex h-full items-center px-1.5 text-xs font-semibold uppercase tracking-wide text-text-dark">
+					<ImageIcon size={12} />
+				</div>
+			),
+			cell: (ctx) => <VariantImageCell variant={ctx.row.original} onOpen={() => openImages(ctx.row.original)} />,
+			size: 60,
+			enableResizing: false,
+			enableSorting: false,
+		};
+
+		const fieldColumns = ALL_VARIANT_FIELDS.map((field) => ({
+			accessorKey: field.key,
+			id: field.key,
+			header: (ctx) => <ColumnHeaderCell column={ctx.column} field={field} />,
+			cell: (ctx) => {
+				const editor =
+					field.type === "readonly" ? (
+						<VariantGridCell value={ctx.getValue()} type="readonly" />
+					) : (
+						<VariantGridCell
+							value={ctx.getValue()}
+							type={field.type}
+							decimal={field.decimal}
+							onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
+						/>
 					);
-				},
-				filterFn: field.type === "boolean" ? booleanFilterFn : textFilterFn,
-				size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : 150,
-			})),
-		[handleSave, openHistory]
-	);
+				if (field.key !== "title") return editor;
+				return (
+					<div className="flex items-center">
+						<div className="min-w-0 flex-1">{editor}</div>
+						<button
+							type="button"
+							onClick={() => openHistory(ctx.row.original)}
+							title="History"
+							className="mr-1 flex-shrink-0 text-text-light hover:text-custom-blue"
+						>
+							<History size={14} />
+						</button>
+					</div>
+				);
+			},
+			filterFn: field.type === "boolean" ? booleanFilterFn : textFilterFn,
+			size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : 150,
+		}));
+
+		return [selectColumn, imagesColumn, ...fieldColumns];
+	}, [handleSave, openHistory, openImages]);
 
 	const table = useReactTable({
 		data: rows,
 		columns,
-		state: { columnVisibility, columnFilters, sorting },
+		state: {
+			columnVisibility,
+			columnFilters,
+			sorting,
+			columnSizing,
+			rowSelection,
+			columnPinning: { left: PINNED_LEFT },
+		},
+		getRowId: (row) => row.id,
 		onColumnVisibilityChange: setColumnVisibility,
 		onColumnFiltersChange: setColumnFilters,
 		onSortingChange: setSorting,
+		onColumnSizingChange: setColumnSizing,
+		onRowSelectionChange: setRowSelection,
+		enableRowSelection: true,
+		columnResizeMode: "onChange",
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 	});
 
 	const visibleRowCount = table.getFilteredRowModel().rows.length;
+	const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+	const imagesTargetImages = imagesVariant
+		? (imagesVariant.variant_images ?? []).map((vi) => ({ id: vi.imageId, url: vi.image?.url }))
+		: [];
 
 	return (
 		<>
@@ -155,6 +264,13 @@ export default function VariantsGridPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
+					{selectedIds.length > 0 && (
+						<Button variant="secondary" onClick={() => setBulkEditOpen(true)}>
+							<span className="flex items-center gap-1.5">
+								<PencilLine size={15} /> Bulk Edit ({selectedIds.length})
+							</span>
+						</Button>
+					)}
 					<VariantLayoutMenu visibility={columnVisibility} onApply={setColumnVisibility} />
 					<Button variant="secondary" onClick={() => setMassEditOpen(true)}>
 						<span className="flex items-center gap-1.5">
@@ -176,12 +292,19 @@ export default function VariantsGridPage() {
 									{headerGroup.headers.map((header) => (
 										<th
 											key={header.id}
-											style={{ width: header.getSize() }}
-											className={`border-b border-r border-border-gray bg-custom-table-head align-top ${
-												header.column.id === "title" ? "sticky left-0 z-20" : ""
-											}`}
+											style={{ width: header.getSize(), ...pinnedStyle(header.column) }}
+											className="relative border-b border-r border-border-gray bg-custom-table-head align-top"
 										>
 											{flexRender(header.column.columnDef.header, header.getContext())}
+											{header.column.getCanResize() && (
+												<div
+													onMouseDown={header.getResizeHandler()}
+													onTouchStart={header.getResizeHandler()}
+													className={`absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none hover:bg-custom-blue ${
+														header.column.getIsResizing() ? "bg-custom-blue" : ""
+													}`}
+												/>
+											)}
 										</th>
 									))}
 								</tr>
@@ -189,13 +312,16 @@ export default function VariantsGridPage() {
 						</thead>
 						<tbody>
 							{table.getRowModel().rows.map((row) => (
-								<tr key={row.id} className="hover:bg-custom-table-soft-blue">
+								<tr
+									key={row.id}
+									className={row.getIsSelected() ? "bg-custom-table-soft-blue" : "hover:bg-custom-table-soft-blue"}
+								>
 									{row.getVisibleCells().map((cell) => (
 										<td
 											key={cell.id}
-											style={{ width: cell.column.getSize() }}
+											style={{ width: cell.column.getSize(), ...pinnedStyle(cell.column) }}
 											className={`border-b border-r border-border-gray ${
-												cell.column.id === "title" ? "sticky left-0 z-[5] bg-white" : ""
+												cell.column.getIsPinned() ? (row.getIsSelected() ? "bg-custom-table-soft-blue" : "bg-white") : ""
 											}`}
 										>
 											{flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -220,10 +346,23 @@ export default function VariantsGridPage() {
 		</div>
 
 		<MassEditModal open={massEditOpen} onClose={() => setMassEditOpen(false)} />
+		<BulkEditModal
+			open={bulkEditOpen}
+			onClose={() => setBulkEditOpen(false)}
+			variantIds={selectedIds.map(Number)}
+			onApplied={() => setRowSelection({})}
+		/>
 		<VariantHistoryModal
 			open={Boolean(historyVariant)}
 			onClose={() => setHistoryVariant(null)}
 			variant={historyVariant}
+		/>
+		<NodeImagesModal
+			open={Boolean(imagesVariant)}
+			onClose={() => setImagesVariant(null)}
+			target="variant"
+			targetId={imagesVariant?.id}
+			currentImages={imagesTargetImages}
 		/>
 	</>
 	);

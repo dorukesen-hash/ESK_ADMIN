@@ -149,4 +149,20 @@ export function useFeaturedVariants() {
 	});
 }
 
-export { PAGE_SIZE };
+const AUDIT_LOG_PAGE_SIZE = 50;
+
+// Global, cross-variant activity feed - distinct from useVariantAuditLog
+// above, which is scoped to one variant.
+export function useAllVariantAuditLog(page = 0) {
+	return useQuery({
+		queryKey: ["variant-audit-log-all", page],
+		queryFn: async () => {
+			const { data } = await api.get("/admin/variant-audit-log", {
+				params: { page, limit: AUDIT_LOG_PAGE_SIZE },
+			});
+			return data;
+		},
+	});
+}
+
+export { PAGE_SIZE, AUDIT_LOG_PAGE_SIZE };

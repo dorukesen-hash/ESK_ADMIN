@@ -86,7 +86,12 @@ export default function ProductFormModal({
 			...values,
 			categoryId: Number(values.categoryId),
 			subcategoryId: Number(values.subcategoryId),
-			list_items: [],
+			// list_items is only sent on create (a brand-new product legitimately
+			// starts with empty extradata). On edit, omit it entirely - this form
+			// has no field for it, and always sending [] silently wiped any real
+			// bullet-point content on every unrelated edit (updateProductAdmin now
+			// treats the key as optional, but only if the caller stops sending it).
+			...(isEdit ? {} : { list_items: [] }),
 		});
 	};
 
