@@ -3,7 +3,7 @@ import {
 	Boxes,
 	Table,
 	Star,
-	SlidersHorizontal,
+	Users2,
 	ClipboardList,
 	Truck,
 	Users,
@@ -17,27 +17,30 @@ export const navSections = [
 	// Catalog: a single hierarchy-aware browser (breadcrumb drill-down through
 	// Category -> Subcategory/Product/Variant) replacing the four old flat
 	// list pages (Categories/Subcategories/Products/Variants), per the
-	// Catalog Hierarchy Redesign plan. Featured stays separate - it's a
-	// variant<->variant cross-link, unrelated to the tree.
+	// Catalog Hierarchy Redesign plan.
 	{ label: "Catalog", href: "/catalog", icon: Boxes },
 	// Variants: a spreadsheet-style grid over the full ~90-field attribute
 	// sheet (title/pricing/packaging/pallet/specs/...), with column show/hide,
 	// saved layouts and per-column filtering - a different tool than Catalog's
 	// hierarchy browser, which only quick-edits a handful of fields per variant.
 	{ label: "Variants", href: "/catalog/variants", icon: Table },
+	// Featured: real, admin-curated homepage highlights (Variant.featured/
+	// featured_position) - distinct from Frequently Bought Together below,
+	// which is a per-variant cross-sell list, not a homepage curation list.
 	{ label: "Featured", href: "/catalog/featured", icon: Star },
 	{
-		label: "Catalog Attributes",
-		icon: SlidersHorizontal,
-		children: [
-			{ label: "Descriptions", href: "/catalog/attributes/descriptions" },
-			{ label: "Dimensions", href: "/catalog/attributes/dimensions" },
-			{ label: "Package Info", href: "/catalog/attributes/package-info" },
-			{ label: "Pallet Info", href: "/catalog/attributes/pallet-info" },
-			{ label: "Specifications", href: "/catalog/attributes/specifications" },
-			{ label: "Pricing", href: "/catalog/attributes/pricing" },
-		],
+		label: "Frequently Bought Together",
+		href: "/catalog/frequently-bought-together",
+		icon: Users2,
 	},
+	// Catalog Attributes (Descriptions/Dimensions/Package Info/Pallet Info/
+	// Specifications/Pricing) removed - those five resources beyond
+	// Descriptions (Dimension/PackageInfo/PalletInfo/Spesification/Price) were
+	// never associated with Variant/Product/Subcategory in ESK_API (confirmed
+	// via db/models/index.js - no hasOne/belongsTo anywhere), so the pages
+	// managed data nothing in the real catalog ever read. Description itself
+	// stays wired (Subcategory's own description field uses it directly, not
+	// through this removed UI).
 	{ label: "Orders", href: "/orders", icon: ClipboardList },
 	{
 		label: "Fulfillment",

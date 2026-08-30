@@ -1,86 +1,128 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import VariantPicker from "@/components/catalog/VariantPicker";
-import { useFeaturedFor, useAddFeatured, useRemoveFeatured } from "@/hooks/catalog/useFeatured";
+import { useFeaturedVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
+// Real, admin-curated "Featured" list - distinct from Frequently Bought
+// Together (moved to /catalog/frequently-bought-together, the old
+// source/target model this route used to host). A variant is either featured
+// or not (`featured` boolean) with a `featured_position` for ordering;
+// ESK_FE's homepage grid (components/home/FeaturedGrid.js) reads this list
+// instead of just showing the first 8 variants that happen to exist.
 export default function FeaturedPage() {
-	const [source, setSource] = useState(null);
+	const { data: featured = [], isLoading } = useFeaturedVariants();
+	const updateField = useUpdateVariantField();
 
-	const { data: featured = [], isLoading } = useFeaturedFor(source?.id);
-	const addFeatured = useAddFeatured();
-	const removeFeatured = useRemoveFeatured();
-
-	const handleAdd = async (target) => {
+	const handleAdd = async (variant) => {
 		try {
-			await addFeatured.mutateAsync({ source_id: source.id, target_id: target.id });
-			notifySuccess("Eklendi.");
+			const nextPosition = featured.length
+				? Math.max(...featured.map((f) => f.featured_position ?? 0)) + 1
+				: 0;
+			await updateField.mutateAsync({ id: variant.id, field: "featured", value: true });
+			await updateField.mutateAsync({ id: variant.id, field: "featured_position", value: nextPosition });
+			notifySuccess("Öne çıkanlara eklendi.");
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Eklenemedi.");
 		}
 	};
 
-	const handleRemove = async (targetId) => {
+	const handleRemove = async (variant) => {
 		try {
-			await removeFeatured.mutateAsync({ targetId, sourceId: source.id });
-			notifySuccess("Kaldırıldı.");
+			await updateField.mutateAsync({ id: variant.id, field: "featured", value: false });
+			await updateField.mutateAsync({ id: variant.id, field: "featured_position", value: null });
+			notifySuccess("Öne çıkanlardan kaldırıldı.");
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Kaldırılamadı.");
 		}
 	};
 
+	const handleMove = async (index, direction) => {
+		const otherIndex = index + direction;
+		if (otherIndex < 0 || otherIndex >= featured.length) return;
+		const current = featured[index];
+		const other = featured[otherIndex];
+		try {
+			await Promise.all([
+				updateField.mutateAsync({
+					id: current.id,
+					field: "featured_position",
+					value: other.featured_position,
+				}),
+				updateField.mutateAsync({
+					id: other.id,
+					field: "featured_position",
+					value: current.featured_position,
+				}),
+			]);
+		} catch (error) {
+			notifyError("Sıralama güncellenemedi.");
+		}
+	};
+
 	return (
 		<div>
-			<PageHeader title="Öne Çıkan Ürünler" />
+			<PageHeader title="Öne Çıkanlar" />
 			<p className="mb-4 text-sm text-text-light">
-				Bir varyant için &quot;sıkça birlikte alınan&quot; en fazla 3 varyant belirleyebilirsiniz.
+				Burada seçtiğiniz varyantlar ana sayfadaki &quot;Featured Products&quot; bölümünde, aşağıdaki
+				sırayla gösterilir.
 			</p>
 
 			<div className="max-w-md">
-				<VariantPicker onSelect={setSource} placeholder="Kaynak varyant ara..." />
+				<VariantPicker
+					onSelect={handleAdd}
+					excludeIds={featured.map((f) => f.id)}
+					placeholder="Öne çıkarılacak varyant ara..."
+				/>
 			</div>
 
-			{source && (
-				<div className="mt-6 bg-white p-6 shadow-custom">
-					<h2 className="font-montserrat text-base font-semibold text-text-dark">
-						{source.title} <span className="text-text-light">({source.stock})</span>
-					</h2>
-
-					<ul className="mt-4 divide-y divide-border-gray">
-						{isLoading && <li className="py-2 text-sm text-text-light">Yükleniyor...</li>}
-						{!isLoading && featured.length === 0 && (
-							<li className="py-2 text-sm text-text-light">Henüz öne çıkan ürün eklenmedi.</li>
-						)}
-						{featured.map((item) => (
-							<li key={item.target_id} className="flex items-center justify-between py-2">
-								<span className="text-sm text-text-dark">
-									{item.target?.title} <span className="text-text-light">({item.target?.stock})</span>
-								</span>
-								<button
-									type="button"
-									onClick={() => handleRemove(item.target_id)}
-									className="text-text-light hover:text-red-600"
-								>
-									<Trash2 size={16} />
-								</button>
+			<div className="mt-6 bg-white shadow-custom">
+				{isLoading && <div className="p-6 text-center text-sm text-text-light">Yükleniyor...</div>}
+				{!isLoading && featured.length === 0 && (
+					<div className="p-6 text-center text-sm text-text-light">Henüz öne çıkan varyant yok.</div>
+				)}
+				{!isLoading && featured.length > 0 && (
+					<ul className="divide-y divide-border-gray">
+						{featured.map((variant, index) => (
+							<li key={variant.id} className="flex items-center justify-between px-4 py-3">
+								<div className="flex items-center gap-3">
+									<span className="w-6 text-center text-sm text-text-light">{index + 1}</span>
+									<span className="text-sm text-text-dark">
+										{variant.title} <span className="text-text-light">({variant.stock})</span>
+									</span>
+								</div>
+								<div className="flex items-center gap-2">
+									<button
+										type="button"
+										onClick={() => handleMove(index, -1)}
+										disabled={index === 0}
+										className="text-text-light hover:text-custom-blue disabled:opacity-30"
+									>
+										<ArrowUp size={16} />
+									</button>
+									<button
+										type="button"
+										onClick={() => handleMove(index, 1)}
+										disabled={index === featured.length - 1}
+										className="text-text-light hover:text-custom-blue disabled:opacity-30"
+									>
+										<ArrowDown size={16} />
+									</button>
+									<button
+										type="button"
+										onClick={() => handleRemove(variant)}
+										className="text-text-light hover:text-red-600"
+									>
+										<Trash2 size={16} />
+									</button>
+								</div>
 							</li>
 						))}
 					</ul>
-
-					{featured.length < 3 && (
-						<div className="mt-4 max-w-md border-t border-border-gray pt-4">
-							<VariantPicker
-								onSelect={handleAdd}
-								excludeIds={[source.id, ...featured.map((f) => f.target_id)]}
-								placeholder="Eklenecek varyant ara..."
-							/>
-						</div>
-					)}
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	);
 }

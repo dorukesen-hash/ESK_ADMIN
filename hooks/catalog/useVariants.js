@@ -69,6 +69,11 @@ export function useUpdateVariantField() {
 			queryClient.setQueryData(["variants-all"], (old) =>
 				old ? old.map((row) => (row.id === id ? { ...row, [field]: value } : row)) : old
 			);
+			// Toggling featured status/position from the grid should also refresh
+			// the dedicated Featured curation page if it's mounted.
+			if (field === "featured" || field === "featured_position") {
+				queryClient.invalidateQueries({ queryKey: ["featured-variants"] });
+			}
 		},
 	});
 }
@@ -128,6 +133,19 @@ export function useVariantAuditLog(variantId) {
 			return data;
 		},
 		enabled: Boolean(variantId),
+	});
+}
+
+// Admin-curated Featured list (distinct from Frequently Bought Together /
+// hooks/catalog/useFeatured.js's source-target model) - a variant is either
+// featured or not, ordered by featured_position.
+export function useFeaturedVariants() {
+	return useQuery({
+		queryKey: ["featured-variants"],
+		queryFn: async () => {
+			const { data } = await api.get("/admin/variant/featured");
+			return data ?? [];
+		},
 	});
 }
 
