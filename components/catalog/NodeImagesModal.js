@@ -20,7 +20,7 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 	const [search, setSearch] = useState("");
 	const [selectedIds, setSelectedIds] = useState([]);
 	const [imageMeta, setImageMeta] = useState({});
-	const [dragIndex, setDragIndex] = useState(null);
+	const [draggedId, setDraggedId] = useState(null);
 	const fileInputRef = useRef(null);
 
 	const { data: images = [], isLoading } = useImages(search);
@@ -54,28 +54,44 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 		setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 	};
 
-	const handleDragStart = (index) => (e) => {
-		setDragIndex(index);
+	// Id-based (not index-based) so the drop target is always resolved against
+	// the CURRENT array on every hover, not a snapshot taken at drag-start -
+	// reorders live as the pointer crosses into another tile instead of only
+	// snapping once on release, and settles instead of oscillating because the
+	// reducer is a no-op (returns the same array reference) once the dragged
+	// id is already sitting at the hovered tile's slot.
+	const handleDragStart = (id) => (e) => {
+		setDraggedId(id);
 		e.dataTransfer.effectAllowed = "move";
+		e.dataTransfer.setData("text/plain", String(id));
 	};
 
-	const handleDragOver = (index) => (e) => {
+	const handleDragEnd = () => {
+		setDraggedId(null);
+	};
+
+	const handleDragEnter = (overId) => (e) => {
+		e.preventDefault();
+		if (draggedId === null || draggedId === overId) return;
+		setSelectedIds((prev) => {
+			const fromIndex = prev.indexOf(draggedId);
+			const toIndex = prev.indexOf(overId);
+			if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
+			const next = [...prev];
+			next.splice(fromIndex, 1);
+			next.splice(toIndex, 0, draggedId);
+			return next;
+		});
+	};
+
+	const handleDragOver = (e) => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = "move";
 	};
 
-	const handleDrop = (index) => (e) => {
+	const handleDrop = (e) => {
 		e.preventDefault();
-		setDragIndex((currentDragIndex) => {
-			if (currentDragIndex === null || currentDragIndex === index) return null;
-			setSelectedIds((prev) => {
-				const next = [...prev];
-				const [moved] = next.splice(currentDragIndex, 1);
-				next.splice(index, 0, moved);
-				return next;
-			});
-			return null;
-		});
+		setDraggedId(null);
 	};
 
 	const handleFilesSelected = async (e) => {
@@ -116,18 +132,20 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 						<div className="bg-button-gray p-4 text-center text-sm text-text-light">No images selected yet</div>
 					) : (
 						<div className="grid max-h-48 grid-cols-4 gap-3 overflow-y-auto sm:grid-cols-6">
-							{selectedIds.map((id, index) => {
+							{selectedIds.map((id) => {
 								const img = imageMeta[id];
 								if (!img) return null;
 								return (
 									<div
 										key={id}
 										draggable
-										onDragStart={handleDragStart(index)}
-										onDragOver={handleDragOver(index)}
-										onDrop={handleDrop(index)}
-										className={`relative aspect-square cursor-move overflow-hidden border-2 border-custom-blue bg-button-gray ${
-											dragIndex === index ? "opacity-40" : ""
+										onDragStart={handleDragStart(id)}
+										onDragEnter={handleDragEnter(id)}
+										onDragOver={handleDragOver}
+										onDrop={handleDrop}
+										onDragEnd={handleDragEnd}
+										className={`relative aspect-square cursor-move overflow-hidden border-2 border-custom-blue bg-button-gray transition-opacity ${
+											draggedId === id ? "opacity-40" : ""
 										}`}
 									>
 										<Image
@@ -135,10 +153,12 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 											alt=""
 											fill
 											sizes="120px"
+											draggable={false}
 											className="pointer-events-none object-cover"
 										/>
 										<button
 											type="button"
+											draggable={false}
 											onClick={() => toggleSelect(id)}
 											className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
 											aria-label="Remove"
