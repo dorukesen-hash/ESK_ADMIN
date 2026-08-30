@@ -46,7 +46,12 @@ export function useAttachImages() {
 		onSuccess: (_data, { target }) => {
 			if (target === "subcategory") queryClient.invalidateQueries({ queryKey: ["subcategories"] });
 			else if (target === "product") queryClient.invalidateQueries({ queryKey: ["products"] });
-			else if (target === "variant") queryClient.invalidateQueries({ queryKey: ["variants"] });
+			else if (target === "variant") {
+				queryClient.invalidateQueries({ queryKey: ["variants"] });
+				// The Variants grid fetches everything in one call under a
+				// different key (useAllVariants) than the paginated list above.
+				queryClient.invalidateQueries({ queryKey: ["variants-all"] });
+			}
 		},
 	});
 }

@@ -4,6 +4,7 @@ import {
 	Table,
 	Star,
 	Users2,
+	History,
 	ClipboardList,
 	Truck,
 	Users,
@@ -33,6 +34,9 @@ export const navSections = [
 		href: "/catalog/frequently-bought-together",
 		icon: Users2,
 	},
+	// Global, cross-variant activity feed (per-variant view is the History
+	// icon inside the Variants grid itself).
+	{ label: "Activity Log", href: "/catalog/activity-log", icon: History },
 	// Catalog Attributes (Descriptions/Dimensions/Package Info/Pallet Info/
 	// Specifications/Pricing) removed - those five resources beyond
 	// Descriptions (Dimension/PackageInfo/PalletInfo/Spesification/Price) were
