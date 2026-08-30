@@ -1,6 +1,7 @@
 import {
 	LayoutDashboard,
 	Boxes,
+	Table,
 	Star,
 	SlidersHorizontal,
 	ClipboardList,
@@ -19,6 +20,11 @@ export const navSections = [
 	// Catalog Hierarchy Redesign plan. Featured stays separate - it's a
 	// variant<->variant cross-link, unrelated to the tree.
 	{ label: "Catalog", href: "/catalog", icon: Boxes },
+	// Variants: a spreadsheet-style grid over the full ~90-field attribute
+	// sheet (title/pricing/packaging/pallet/specs/...), with column show/hide,
+	// saved layouts and per-column filtering - a different tool than Catalog's
+	// hierarchy browser, which only quick-edits a handful of fields per variant.
+	{ label: "Variants", href: "/catalog/variants", icon: Table },
 	{ label: "Featured", href: "/catalog/featured", icon: Star },
 	{
 		label: "Catalog Attributes",

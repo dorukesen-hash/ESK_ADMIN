@@ -35,6 +35,44 @@ export function useUpdateVariant() {
 	});
 }
 
+// Fetches every variant in one call (no pagination) for the spreadsheet-style
+// grid, which needs the whole catalog to filter/sort client-side rather than
+// page through it. The real catalog is ~185 variants total (2026-08), so this
+// stays a small payload - if it ever grows enough to matter, this is the hook
+// to revisit (e.g. server-side filtering) rather than the paginated one above.
+const ALL_VARIANTS_LIMIT = 5000;
+
+export function useAllVariants() {
+	return useQuery({
+		queryKey: ["variants-all"],
+		queryFn: async () => {
+			const { data } = await api.get("/admin/variant/", {
+				params: { page: 0, limit: ALL_VARIANTS_LIMIT, globalFilter: "" },
+			});
+			const rows = data.rows ?? [];
+			const seen = new Set();
+			return rows.filter((row) => (seen.has(row.id) ? false : seen.add(row.id)));
+		},
+	});
+}
+
+// Autosave for a single grid cell: PUT just {id, [field]: value} (safe -
+// updateVariantForAdmin does a plain Sequelize .update() with whatever keys
+// are sent, no destructive full-array requirement like Subcategory/Product
+// had) and patch the already-fetched "variants-all" cache in place instead of
+// invalidating+refetching the whole grid on every keystroke's autosave.
+export function useUpdateVariantField() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, field, value }) => api.put("/admin/variant/", { id, [field]: value }),
+		onSuccess: (_data, { id, field, value }) => {
+			queryClient.setQueryData(["variants-all"], (old) =>
+				old ? old.map((row) => (row.id === id ? { ...row, [field]: value } : row)) : old
+			);
+		},
+	});
+}
+
 export function useDeleteVariant() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -57,6 +95,39 @@ export function useUploadVariantExcel() {
 			});
 		},
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["variants"] }),
+	});
+}
+
+// Mass Edit: download the full catalog as Excel, edit offline, re-upload.
+export function useExportVariants() {
+	return useMutation({
+		mutationFn: async () => {
+			const { data } = await api.get("/admin/variant/export", { responseType: "blob" });
+			return data;
+		},
+	});
+}
+
+export function useBulkImportVariants() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (file) => {
+			const formData = new FormData();
+			formData.append("file", file);
+			return api.post("/admin/variant/bulk-import", formData);
+		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["variants-all"] }),
+	});
+}
+
+export function useVariantAuditLog(variantId) {
+	return useQuery({
+		queryKey: ["variant-audit-log", variantId],
+		queryFn: async () => {
+			const { data } = await api.get(`/admin/variant/${variantId}/audit-log`);
+			return data;
+		},
+		enabled: Boolean(variantId),
 	});
 }
 

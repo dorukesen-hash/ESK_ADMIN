@@ -1,0 +1,272 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+import {
+	useReactTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getSortedRowModel,
+	flexRender,
+} from "@tanstack/react-table";
+import { ChevronUp, ChevronDown, History, Table2 } from "lucide-react";
+import Button from "@/components/ui/Button";
+import { useAllVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
+import { ALL_VARIANT_FIELDS, DEFAULT_VISIBLE_KEYS } from "@/components/catalog/variantFieldConfig";
+import VariantGridCell from "@/components/catalog/VariantGridCell";
+import VariantColumnPicker from "@/components/catalog/VariantColumnPicker";
+import VariantLayoutMenu from "@/components/catalog/VariantLayoutMenu";
+import MassEditModal from "@/components/catalog/MassEditModal";
+import VariantHistoryModal from "@/components/catalog/VariantHistoryModal";
+import { notifyError } from "@/lib/toast";
+
+function buildInitialVisibility() {
+	const visibility = {};
+	ALL_VARIANT_FIELDS.forEach((f) => {
+		visibility[f.key] = DEFAULT_VISIBLE_KEYS.includes(f.key);
+	});
+	return visibility;
+}
+
+const textFilterFn = (row, columnId, filterValue) => {
+	if (!filterValue) return true;
+	const cellValue = row.getValue(columnId);
+	return String(cellValue ?? "")
+		.toLowerCase()
+		.includes(String(filterValue).toLowerCase());
+};
+
+const booleanFilterFn = (row, columnId, filterValue) => {
+	if (!filterValue || filterValue === "all") return true;
+	const cellValue = Boolean(row.getValue(columnId));
+	return filterValue === "yes" ? cellValue : !cellValue;
+};
+
+export default function VariantsGridPage() {
+	const { data: variants = [], isLoading } = useAllVariants();
+	// Destructure just the stable mutateAsync function, not the whole mutation
+	// result object - useMutation() returns a NEW object every render (isPending
+	// etc. are render-time state) even though mutateAsync itself is memoized, so
+	// depending on the whole object below would recreate handleSave -> columns
+	// -> every header/cell render function on every render, tearing down and
+	// rebuilding the filter <input> DOM nodes and losing focus on each keystroke.
+	const { mutateAsync: saveVariantField } = useUpdateVariantField();
+
+	const [columnVisibility, setColumnVisibility] = useState(buildInitialVisibility);
+	const [columnFilters, setColumnFilters] = useState([]);
+	const [sorting, setSorting] = useState([]);
+	const [massEditOpen, setMassEditOpen] = useState(false);
+	const [historyVariant, setHistoryVariant] = useState(null);
+
+	const openHistory = useCallback((variant) => setHistoryVariant(variant), []);
+
+	// getVariantsForAdmin's Category/Subcategory/Product includes are unrestricted
+	// full associations - project down to just the names the grid shows.
+	const rows = useMemo(
+		() =>
+			variants.map((v) => ({
+				...v,
+				categoryName: v.category?.name ?? "-",
+				subcategoryName: v.subcategory?.name ?? "-",
+				productName: v.product?.title ?? "-",
+			})),
+		[variants]
+	);
+
+	const handleSave = useCallback(
+		async (id, field, value) => {
+			try {
+				await saveVariantField({ id, field, value });
+			} catch (error) {
+				notifyError(`Could not save "${field}".`);
+				throw error;
+			}
+		},
+		[saveVariantField]
+	);
+
+	const columns = useMemo(
+		() =>
+			ALL_VARIANT_FIELDS.map((field) => ({
+				accessorKey: field.key,
+				id: field.key,
+				header: (ctx) => <ColumnHeaderCell column={ctx.column} field={field} />,
+				cell: (ctx) => {
+					const editor =
+						field.type === "readonly" ? (
+							<VariantGridCell value={ctx.getValue()} type="readonly" />
+						) : (
+							<VariantGridCell
+								value={ctx.getValue()}
+								type={field.type}
+								decimal={field.decimal}
+								onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
+							/>
+						);
+					if (field.key !== "title") return editor;
+					return (
+						<div className="flex items-center">
+							<div className="min-w-0 flex-1">{editor}</div>
+							<button
+								type="button"
+								onClick={() => openHistory(ctx.row.original)}
+								title="History"
+								className="mr-1 flex-shrink-0 text-text-light hover:text-custom-blue"
+							>
+								<History size={14} />
+							</button>
+						</div>
+					);
+				},
+				filterFn: field.type === "boolean" ? booleanFilterFn : textFilterFn,
+				size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : 150,
+			})),
+		[handleSave, openHistory]
+	);
+
+	const table = useReactTable({
+		data: rows,
+		columns,
+		state: { columnVisibility, columnFilters, sorting },
+		onColumnVisibilityChange: setColumnVisibility,
+		onColumnFiltersChange: setColumnFilters,
+		onSortingChange: setSorting,
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	});
+
+	const visibleRowCount = table.getFilteredRowModel().rows.length;
+
+	return (
+		<>
+		{/* h-full fills the dashboard main's actual remaining height (Topbar +
+		main's own padding already accounted for by the flex chain) instead of
+		a hand-guessed calc() - the toolbar row takes its natural height,
+		the table area below (flex-1 min-h-0) takes exactly what's left, and
+		min-w-0 throughout keeps a wide table scrolling INSIDE this page
+		rather than blowing out the whole dashboard column (see the matching
+		min-w-0 fix in app/(dashboard)/layout.js). */}
+		<div className="flex h-full min-w-0 flex-col">
+			<div className="mb-4 flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
+				<div>
+					<h1 className="font-montserrat text-xl font-semibold text-text-dark">Variants</h1>
+					<p className="text-sm text-text-light">
+						{visibleRowCount} of {rows.length} variants — edits save automatically.
+					</p>
+				</div>
+				<div className="flex items-center gap-2">
+					<VariantLayoutMenu visibility={columnVisibility} onApply={setColumnVisibility} />
+					<Button variant="secondary" onClick={() => setMassEditOpen(true)}>
+						<span className="flex items-center gap-1.5">
+							<Table2 size={15} /> Mass Edit
+						</span>
+					</Button>
+					<VariantColumnPicker visibility={columnVisibility} onChange={setColumnVisibility} />
+				</div>
+			</div>
+
+			{isLoading ? (
+				<div className="bg-white p-8 text-center text-sm text-text-light shadow-custom">Loading...</div>
+			) : (
+				<div className="min-h-0 w-full min-w-0 flex-1 overflow-auto bg-white shadow-custom">
+					<table className="border-collapse text-sm" style={{ width: table.getTotalSize() }}>
+						<thead className="sticky top-0 z-10">
+							{table.getHeaderGroups().map((headerGroup) => (
+								<tr key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<th
+											key={header.id}
+											style={{ width: header.getSize() }}
+											className={`border-b border-r border-border-gray bg-custom-table-head align-top ${
+												header.column.id === "title" ? "sticky left-0 z-20" : ""
+											}`}
+										>
+											{flexRender(header.column.columnDef.header, header.getContext())}
+										</th>
+									))}
+								</tr>
+							))}
+						</thead>
+						<tbody>
+							{table.getRowModel().rows.map((row) => (
+								<tr key={row.id} className="hover:bg-custom-table-soft-blue">
+									{row.getVisibleCells().map((cell) => (
+										<td
+											key={cell.id}
+											style={{ width: cell.column.getSize() }}
+											className={`border-b border-r border-border-gray ${
+												cell.column.id === "title" ? "sticky left-0 z-[5] bg-white" : ""
+											}`}
+										>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</td>
+									))}
+								</tr>
+							))}
+							{table.getRowModel().rows.length === 0 && (
+								<tr>
+									<td
+										colSpan={table.getVisibleLeafColumns().length}
+										className="p-8 text-center text-sm text-text-light"
+									>
+										No variants match the current filters.
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</div>
+
+		<MassEditModal open={massEditOpen} onClose={() => setMassEditOpen(false)} />
+		<VariantHistoryModal
+			open={Boolean(historyVariant)}
+			onClose={() => setHistoryVariant(null)}
+			variant={historyVariant}
+		/>
+	</>
+	);
+}
+
+function ColumnHeaderCell({ column, field }) {
+	const sorted = column.getIsSorted();
+	const filterValue = column.getFilterValue();
+
+	return (
+		<div className="select-none">
+			<button
+				type="button"
+				onClick={column.getToggleSortingHandler()}
+				className="flex w-full items-center gap-1 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-dark hover:text-custom-blue"
+			>
+				<span className="truncate">{field.label}</span>
+				{sorted === "asc" && <ChevronUp size={11} />}
+				{sorted === "desc" && <ChevronDown size={11} />}
+			</button>
+			{field.type !== "readonly" && (
+				<div className="px-1.5 pb-1.5">
+					{field.type === "boolean" ? (
+						<select
+							value={filterValue ?? "all"}
+							onChange={(e) => column.setFilterValue(e.target.value === "all" ? undefined : e.target.value)}
+							className="w-full border border-border-gray bg-white px-1 py-1 text-xs text-text-dark"
+						>
+							<option value="all">All</option>
+							<option value="yes">Yes</option>
+							<option value="no">No</option>
+						</select>
+					) : (
+						<input
+							type="text"
+							value={filterValue ?? ""}
+							onChange={(e) => column.setFilterValue(e.target.value || undefined)}
+							placeholder="Filter..."
+							className="w-full border border-border-gray bg-white px-1.5 py-1 text-xs text-text-dark focus:border-custom-blue focus:outline-none"
+						/>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
