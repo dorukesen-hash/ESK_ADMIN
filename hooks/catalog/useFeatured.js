@@ -27,12 +27,27 @@ export function useFeaturedFor(sourceId) {
 	});
 }
 
+// Source variants that already have at least one FBT target configured, so
+// the page can open on "previously entered" sources instead of requiring a
+// fresh search every time.
+export function useFeaturedSources() {
+	return useQuery({
+		queryKey: ["featured-sources"],
+		queryFn: async () => {
+			const { data } = await api.get("/featured/sources");
+			return data ?? [];
+		},
+	});
+}
+
 export function useAddFeatured() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (payload) => api.post("/featured", payload),
-		onSuccess: (_, variables) =>
-			queryClient.invalidateQueries({ queryKey: ["featured", variables.source_id] }),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({ queryKey: ["featured", variables.source_id] });
+			queryClient.invalidateQueries({ queryKey: ["featured-sources"] });
+		},
 	});
 }
 
@@ -42,7 +57,9 @@ export function useRemoveFeatured() {
 		// The :id route param is actually target_id server-side (deleteFeaturedProducts
 		// deletes by target_id, not the Featured row's own primary key).
 		mutationFn: ({ targetId }) => api.delete(`/featured/${targetId}`),
-		onSuccess: (_, variables) =>
-			queryClient.invalidateQueries({ queryKey: ["featured", variables.sourceId] }),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({ queryKey: ["featured", variables.sourceId] });
+			queryClient.invalidateQueries({ queryKey: ["featured-sources"] });
+		},
 	});
 }

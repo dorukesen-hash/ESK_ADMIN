@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowLeft } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import VariantPicker from "@/components/catalog/VariantPicker";
-import { useFeaturedFor, useAddFeatured, useRemoveFeatured } from "@/hooks/catalog/useFeatured";
+import {
+	useFeaturedFor,
+	useFeaturedSources,
+	useAddFeatured,
+	useRemoveFeatured,
+} from "@/hooks/catalog/useFeatured";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
 // Moved from /catalog/featured (route reclaimed for the real, admin-curated
@@ -15,6 +20,7 @@ import { notifySuccess, notifyError } from "@/lib/toast";
 export default function FrequentlyBoughtTogetherPage() {
 	const [source, setSource] = useState(null);
 
+	const { data: sources = [], isLoading: sourcesLoading } = useFeaturedSources();
 	const { data: featured = [], isLoading } = useFeaturedFor(source?.id);
 	const addFeatured = useAddFeatured();
 	const removeFeatured = useRemoveFeatured();
@@ -45,12 +51,57 @@ export default function FrequentlyBoughtTogetherPage() {
 				liste, ürün sayfasındaki &quot;Frequently Purchased Together&quot; sekmesinde gösterilir.
 			</p>
 
-			<div className="max-w-md">
-				<VariantPicker onSelect={setSource} placeholder="Kaynak varyant ara..." />
-			</div>
+			{!source && (
+				<>
+					<div className="bg-white shadow-custom">
+						<div className="border-b border-border-gray px-4 py-3">
+							<span className="text-sm font-semibold text-text-dark">
+								Daha önce eklenenler <span className="font-normal text-text-light">({sources.length})</span>
+							</span>
+						</div>
+						{sourcesLoading && <div className="p-4 text-center text-sm text-text-light">Yükleniyor...</div>}
+						{!sourcesLoading && sources.length === 0 && (
+							<div className="p-4 text-center text-sm text-text-light">
+								Henüz hiçbir varyant için ilişki eklenmedi.
+							</div>
+						)}
+						{!sourcesLoading && sources.length > 0 && (
+							<ul className="divide-y divide-border-gray">
+								{sources.map((v) => (
+									<li key={v.id}>
+										<button
+											type="button"
+											onClick={() => setSource(v)}
+											className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-custom-table-soft-blue"
+										>
+											<span className="text-sm text-text-dark">
+												{v.title} <span className="text-text-light">({v.stock})</span>
+											</span>
+											<span className="text-sm text-text-light">{v.targetCount} varyant</span>
+										</button>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+
+					<div className="mt-6 max-w-md">
+						<p className="mb-2 text-sm font-medium text-text-dark">Ya da yeni bir kaynak varyant seçin</p>
+						<VariantPicker onSelect={setSource} placeholder="Kaynak varyant ara..." />
+					</div>
+				</>
+			)}
 
 			{source && (
-				<div className="mt-6 bg-white p-6 shadow-custom">
+				<div className="bg-white p-6 shadow-custom">
+					<button
+						type="button"
+						onClick={() => setSource(null)}
+						className="mb-4 flex items-center gap-1 text-sm text-text-light hover:text-custom-blue"
+					>
+						<ArrowLeft size={14} /> Listeye dön
+					</button>
+
 					<h2 className="font-montserrat text-base font-semibold text-text-dark">
 						{source.title} <span className="text-text-light">({source.stock})</span>
 					</h2>
