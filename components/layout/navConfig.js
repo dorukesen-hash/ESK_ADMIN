@@ -9,6 +9,8 @@ import {
 	Truck,
 	Users,
 	Image as ImageIcon,
+	Tag,
+	FileText,
 } from "lucide-react";
 
 // Fresh IA, grouped by business function - not a port of ESK_FE's old
@@ -46,6 +48,8 @@ export const navSections = [
 	// stays wired (Subcategory's own description field uses it directly, not
 	// through this removed UI).
 	{ label: "Orders", href: "/orders", icon: ClipboardList },
+	{ label: "Discount Codes", href: "/discount-codes", icon: Tag },
+	{ label: "Invoices", href: "/invoices", icon: FileText },
 	{
 		label: "Fulfillment",
 		icon: Truck,

@@ -4,7 +4,14 @@ import { useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
+import { checkboxClass } from "@/components/ui/FormField";
 import { useAllVariantAuditLog, AUDIT_LOG_PAGE_SIZE } from "@/hooks/catalog/useVariants";
+import { VARIANT_FIELD_GROUPS } from "@/components/catalog/variantFieldConfig";
+
+// The "Pricing" field group's keys - variant_audit_log already captures
+// changes to these as a side effect of any admin edit (nothing new to log),
+// this just filters the existing feed down to price-relevant rows.
+const PRICE_FIELD_KEYS = (VARIANT_FIELD_GROUPS.find((g) => g.id === "pricing")?.fields ?? []).map((f) => f.key);
 
 const ACTION_LABELS = {
 	create: "Created",
@@ -27,7 +34,8 @@ function formatDate(value) {
 // everything, newest first.
 export default function ActivityLogPage() {
 	const [page, setPage] = useState(0);
-	const { data, isLoading } = useAllVariantAuditLog(page);
+	const [priceOnly, setPriceOnly] = useState(false);
+	const { data, isLoading } = useAllVariantAuditLog(page, priceOnly ? PRICE_FIELD_KEYS : undefined);
 
 	const logs = data?.rows ?? [];
 	const totalPages = data ? Math.max(1, Math.ceil(data.count / AUDIT_LOG_PAGE_SIZE)) : 1;
@@ -38,6 +46,19 @@ export default function ActivityLogPage() {
 			<p className="mb-4 text-sm text-text-light">
 				Every create, update and delete made to a variant, across the whole catalog.
 			</p>
+
+			<label className="mb-4 flex items-center gap-2 text-sm text-text-dark">
+				<input
+					type="checkbox"
+					checked={priceOnly}
+					onChange={(e) => {
+						setPriceOnly(e.target.checked);
+						setPage(0);
+					}}
+					className={checkboxClass}
+				/>
+				Price History only (tier/pallet pricing fields)
+			</label>
 
 			<DataTable
 				isLoading={isLoading}

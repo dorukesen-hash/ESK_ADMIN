@@ -152,13 +152,16 @@ export function useFeaturedVariants() {
 const AUDIT_LOG_PAGE_SIZE = 50;
 
 // Global, cross-variant activity feed - distinct from useVariantAuditLog
-// above, which is scoped to one variant.
-export function useAllVariantAuditLog(page = 0) {
+// above, which is scoped to one variant. `fields` (optional array of Variant
+// field keys) narrows the feed server-side - used by the "Price History"
+// filter on the Activity Log page.
+export function useAllVariantAuditLog(page = 0, fields) {
+	const fieldsParam = fields && fields.length > 0 ? fields.join(",") : undefined;
 	return useQuery({
-		queryKey: ["variant-audit-log-all", page],
+		queryKey: ["variant-audit-log-all", page, fieldsParam],
 		queryFn: async () => {
 			const { data } = await api.get("/admin/variant-audit-log", {
-				params: { page, limit: AUDIT_LOG_PAGE_SIZE },
+				params: { page, limit: AUDIT_LOG_PAGE_SIZE, fields: fieldsParam },
 			});
 			return data;
 		},
