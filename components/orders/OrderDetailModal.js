@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormField, { selectClass, inputClass, textareaClass } from "@/components/ui/FormField";
 import {
 	useOrder,
@@ -11,12 +12,27 @@ import {
 	useUpdateOrderStatus,
 	useCompleteOrder,
 	useUpdateOrderItemTracking,
+	useRefundOrder,
+	useOrderAuditLog,
 } from "@/hooks/orders/useOrders";
 import { useOrderStatusList } from "@/hooks/orders/useOrderStatuses";
 import { useCarriers } from "@/hooks/fulfillment/useCarriers";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const REFUNDED_STATUS_ID = 6;
+
+const AUDIT_ACTION_LABELS = {
+	status_change: "Durum Değişikliği",
+	refund: "İade",
+};
+
+function formatAuditUser(user) {
+	if (!user) return "Sistem";
+	const name = `${user.name ?? ""} ${user.surname ?? ""}`.trim();
+	return name || user.email || "Sistem";
+}
 
 export default function OrderDetailModal({ orderId, onClose }) {
 	const { data: order, isLoading } = useOrder(orderId);
@@ -27,9 +43,12 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const completeOrder = useCompleteOrder();
 	const updateItemNote = useUpdateOrderItemTracking();
 	const updateOrder = useUpdateOrder();
+	const refundOrder = useRefundOrder();
+	const { data: auditLog = [] } = useOrderAuditLog(orderId);
 
 	const [statusId, setStatusId] = useState("");
 	const [showComplete, setShowComplete] = useState(false);
+	const [confirmingRefund, setConfirmingRefund] = useState(false);
 	const [carrierId, setCarrierId] = useState("");
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [itemNotes, setItemNotes] = useState({});
@@ -128,6 +147,23 @@ export default function OrderDetailModal({ orderId, onClose }) {
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Not kaydedilemedi.");
 		}
+	};
+
+	const handleRefund = async () => {
+		try {
+			await refundOrder.mutateAsync(orderId);
+			notifySuccess("Sipariş iade edildi.");
+			setConfirmingRefund(false);
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "İade başarısız.");
+			setConfirmingRefund(false);
+		}
+	};
+
+	const statusName = (id) => statuses.find((s) => String(s.id) === String(id))?.name ?? `#${id}`;
+	const formatAuditValue = (entry, value) => {
+		if (value === null || value === undefined) return "-";
+		return entry.field === "orderstatusId" ? statusName(value) : value;
 	};
 
 	return (
@@ -369,6 +405,12 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							</Button>
 						)}
 
+						{order.isPaid && order.orderstatusId !== REFUNDED_STATUS_ID && (
+							<Button variant="danger" onClick={() => setConfirmingRefund(true)} isLoading={refundOrder.isPending}>
+								İade Et
+							</Button>
+						)}
+
 						<a
 							href={`${API_URL}/invoices/pdf/${order.id}`}
 							target="_blank"
@@ -407,8 +449,42 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							</Button>
 						</div>
 					)}
+
+					{auditLog.length > 0 && (
+						<div className="border-t border-border-gray pt-4">
+							<p className="mb-2 text-sm font-medium text-text-dark">Sipariş Geçmişi</p>
+							<div className="space-y-1 text-xs">
+								{auditLog.map((entry) => (
+									<div key={entry.id} className="flex items-center justify-between text-text-light">
+										<span>
+											{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}
+											{entry.action === "status_change" && (
+												<>
+													: {formatAuditValue(entry, entry.oldValue)} {"->"} {formatAuditValue(entry, entry.newValue)}
+												</>
+											)}
+											{" · "}
+											{formatAuditUser(entry.actor)}
+										</span>
+										<span>{new Date(entry.createdAt).toLocaleString("tr-TR")}</span>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 				</div>
 			)}
+
+			<ConfirmDialog
+				open={confirmingRefund}
+				onClose={() => setConfirmingRefund(false)}
+				onConfirm={handleRefund}
+				title="Siparişi iade et"
+				description="Bu siparişin ödemesi Stripe üzerinden iade edilecek ve durumu 'Refunded' olarak güncellenecek. Bu işlem geri alınamaz. Devam etmek istediğinize emin misiniz?"
+				confirmLabel="İade Et"
+				confirmVariant="danger"
+				isLoading={refundOrder.isPending}
+			/>
 		</Modal>
 	);
 }

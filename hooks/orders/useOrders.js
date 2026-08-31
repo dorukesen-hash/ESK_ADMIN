@@ -52,6 +52,7 @@ export function useUpdateOrderStatus() {
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["orders"] });
 			queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
+			queryClient.invalidateQueries({ queryKey: ["order-audit-log", variables.orderId] });
 		},
 	});
 }
@@ -67,6 +68,7 @@ export function useCompleteOrder() {
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["orders"] });
 			queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
+			queryClient.invalidateQueries({ queryKey: ["order-audit-log", variables.orderId] });
 		},
 	});
 }
@@ -76,6 +78,31 @@ export function useUpdateOrderItemTracking() {
 	return useMutation({
 		mutationFn: ({ orderItemId, note }) => api.post("/admin/orderitems/tracking", { orderItemId, note }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["order"] }),
+	});
+}
+
+// Refunds the order's payment via Stripe (using the linked Transaction's
+// real PaymentIntent id) and flips status to Refunded server-side.
+export function useRefundOrder() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (orderId) => api.post(`/admin/orders/${orderId}/refund`),
+		onSuccess: (_, orderId) => {
+			queryClient.invalidateQueries({ queryKey: ["orders"] });
+			queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+			queryClient.invalidateQueries({ queryKey: ["order-audit-log", orderId] });
+		},
+	});
+}
+
+export function useOrderAuditLog(orderId) {
+	return useQuery({
+		queryKey: ["order-audit-log", orderId],
+		queryFn: async () => {
+			const { data } = await api.get(`/admin/orders/${orderId}/audit-log`);
+			return data ?? [];
+		},
+		enabled: Boolean(orderId),
 	});
 }
 
