@@ -12,7 +12,10 @@ import { useOrders, PAGE_SIZE } from "@/hooks/orders/useOrders";
 
 // The only status values getOrders' `status` filter recognizes server-side -
 // hardcoded to orderstatusId 1-6, independent of the real OrderStatus table.
-const STATUS_OPTIONS = ["New", "In Progress", "Completed", "On Hold", "Cancelled", "Refunded"];
+// Labels must match the real orderstatus.name values exactly (id=1 is
+// "Pending" in the DB, not "New" - this used to say "New" and only worked
+// by accident since nothing else used that string).
+const STATUS_OPTIONS = ["Pending", "In Progress", "Completed", "On Hold", "Cancelled", "Refunded"];
 
 export default function OrdersPage() {
 	const [page, setPage] = useState(0);
