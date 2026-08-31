@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
 import Button from "@/components/ui/Button";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormField, { inputClass, checkboxClass } from "@/components/ui/FormField";
 import { useUpdateUserAccount, useSendPasswordReset } from "@/hooks/customers/useCustomerDetail";
 import { notifySuccess, notifyError } from "@/lib/toast";
@@ -16,8 +17,11 @@ const FIELDS = [
 
 export default function AccountSection({ customerId, user }) {
 	const [form, setForm] = useState({});
+	const [confirmingGrant, setConfirmingGrant] = useState(false);
 	const updateAccount = useUpdateUserAccount(customerId);
 	const sendReset = useSendPasswordReset();
+
+	const initialIsAdmin = user?.isAdmin === "admin";
 
 	useEffect(() => {
 		if (user) {
@@ -27,6 +31,7 @@ export default function AccountSection({ customerId, user }) {
 				email: user.email ?? "",
 				phone: user.phone ?? "",
 				isActive: Boolean(user.isActive),
+				isAdmin: user.isAdmin === "admin",
 				discountPercent: user.discountPercent ?? "",
 			});
 		}
@@ -34,7 +39,7 @@ export default function AccountSection({ customerId, user }) {
 
 	if (!user) return null;
 
-	const handleSave = async () => {
+	const doSave = async () => {
 		try {
 			await updateAccount.mutateAsync({
 				userId: user.id,
@@ -43,12 +48,25 @@ export default function AccountSection({ customerId, user }) {
 				email: form.email,
 				phone: form.phone,
 				isActive: form.isActive,
+				isAdmin: form.isAdmin,
 				discountPercent: form.discountPercent === "" ? null : parseFloat(form.discountPercent),
 			});
 			notifySuccess("Hesap güncellendi.");
+			setConfirmingGrant(false);
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Güncellenemedi.");
 		}
+	};
+
+	// Revoking admin (or leaving it unchanged) saves directly - only newly
+	// GRANTING it pauses for an explicit confirmation, since it's the
+	// higher-consequence direction.
+	const handleSave = () => {
+		if (form.isAdmin && !initialIsAdmin) {
+			setConfirmingGrant(true);
+			return;
+		}
+		doSave();
 	};
 
 	const handleSendReset = async () => {
@@ -93,6 +111,15 @@ export default function AccountSection({ customerId, user }) {
 					/>
 					Hesap aktif
 				</label>
+				<label className="mt-6 flex items-center gap-2 text-sm text-text-dark">
+					<input
+						type="checkbox"
+						checked={Boolean(form.isAdmin)}
+						onChange={(e) => setForm((prev) => ({ ...prev, isAdmin: e.target.checked }))}
+						className={checkboxClass}
+					/>
+					Yönetici (Admin) yetkisi
+				</label>
 			</div>
 
 			<div className="mt-4 flex items-center justify-between">
@@ -105,6 +132,17 @@ export default function AccountSection({ customerId, user }) {
 					Kaydet
 				</Button>
 			</div>
+
+			<ConfirmDialog
+				open={confirmingGrant}
+				onClose={() => setConfirmingGrant(false)}
+				onConfirm={doSave}
+				title="Yönetici yetkisi ver"
+				description="Bu kullanıcıya tam yönetici (admin) yetkisi vermek üzeresiniz. Bu, panele tam erişim anlamına gelir. Devam etmek istediğinize emin misiniz?"
+				confirmLabel="Yetki Ver"
+				confirmVariant="primary"
+				isLoading={updateAccount.isPending}
+			/>
 		</div>
 	);
 }
