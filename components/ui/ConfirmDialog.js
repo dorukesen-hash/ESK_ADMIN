@@ -10,6 +10,8 @@ export default function ConfirmDialog({
 	title = "Emin misiniz?",
 	description,
 	isLoading = false,
+	confirmLabel = "Sil",
+	confirmVariant = "danger",
 }) {
 	return (
 		<Modal open={open} onClose={onClose} title={title} maxWidth="max-w-sm">
@@ -18,8 +20,8 @@ export default function ConfirmDialog({
 				<Button variant="secondary" onClick={onClose} disabled={isLoading}>
 					Vazgeç
 				</Button>
-				<Button variant="danger" onClick={onConfirm} isLoading={isLoading}>
-					Sil
+				<Button variant={confirmVariant} onClick={onConfirm} isLoading={isLoading}>
+					{confirmLabel}
 				</Button>
 			</div>
 		</Modal>

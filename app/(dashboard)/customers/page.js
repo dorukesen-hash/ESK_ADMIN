@@ -1,19 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import SearchInput from "@/components/ui/SearchInput";
 import DataTable from "@/components/ui/DataTable";
 import Pagination from "@/components/ui/Pagination";
-import CustomerShippingProfilesModal from "@/components/customers/CustomerShippingProfilesModal";
 import { useCustomers, PAGE_SIZE } from "@/hooks/customers/useCustomers";
 
 export default function CustomersPage() {
+	const router = useRouter();
 	const [page, setPage] = useState(0);
 	const [search, setSearch] = useState("");
 	const { data, isLoading } = useCustomers({ page, search });
-	const [selectedCustomer, setSelectedCustomer] = useState(null);
 
 	const customers = data?.rows ?? [];
 	const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1;
@@ -36,6 +35,7 @@ export default function CustomersPage() {
 				rows={customers}
 				getRowId={(row) => row.id}
 				emptyMessage="Müşteri bulunamadı"
+				onRowClick={(row) => router.push(`/customers/${row.id}`)}
 				columns={[
 					{
 						key: "name",
@@ -46,21 +46,9 @@ export default function CustomersPage() {
 					{ key: "phone", header: "Telefon", render: (row) => row.phone ?? "-" },
 					{ key: "city", header: "Şehir", render: (row) => row.city ?? "-" },
 				]}
-				actions={(row) => (
-					<button
-						type="button"
-						onClick={() => setSelectedCustomer(row)}
-						className="text-text-light hover:text-custom-blue"
-						title="Adresler"
-					>
-						<MapPin size={16} />
-					</button>
-				)}
 			/>
 
 			<Pagination page={page + 1} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} />
-
-			<CustomerShippingProfilesModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />
 		</div>
 	);
 }
