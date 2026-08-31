@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Image from "next/image";
 import {
 	useReactTable,
 	getCoreRowModel,
@@ -64,10 +65,17 @@ function VariantImageCell({ variant, onOpen }) {
 			className="flex h-full w-full items-center justify-center gap-1 px-1.5 py-1"
 		>
 			{first ? (
-				// A fixed 20px thumbnail inside a dense table cell - next/image's
-				// fill mode needs a sized wrapper and adds overhead this doesn't need.
-				// eslint-disable-next-line @next/next/no-img-element
-				<img src={`${CDN_URL}/${first.url}`} alt="" className="h-5 w-5 flex-shrink-0 object-cover" />
+				// next/image's fixed width/height mode (not fill - no positioned
+				// wrapper needed for a small fixed element) - lets Next resize the
+				// often-huge original down to 20px server-side instead of shipping
+				// the full file for a table-cell thumbnail.
+				<Image
+					src={`${CDN_URL}/${first.url}`}
+					alt=""
+					width={20}
+					height={20}
+					className="h-5 w-5 flex-shrink-0 object-cover"
+				/>
 			) : (
 				<span className="flex h-5 w-5 flex-shrink-0 items-center justify-center border border-dashed border-border-gray text-text-light">
 					<ImageIcon size={11} />
