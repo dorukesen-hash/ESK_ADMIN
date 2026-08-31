@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X, Check } from "lucide-react";
-import Modal from "@/components/ui/Modal";
+import { Pencil, Trash2, X, Check, Plus } from "lucide-react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Button from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/FormField";
 import {
 	useCustomerShippingProfiles,
+	useCreateShippingProfile,
 	useUpdateShippingProfile,
 	useDeleteShippingProfile,
 } from "@/hooks/customers/useShippingProfiles";
@@ -21,6 +22,8 @@ const FIELDS = [
 	{ name: "zip", label: "Posta Kodu" },
 	{ name: "phone", label: "Telefon" },
 ];
+
+const EMPTY_FORM = Object.fromEntries(FIELDS.map((f) => [f.name, ""]));
 
 function ProfileRow({ profile, userId }) {
 	const [editing, setEditing] = useState(false);
@@ -121,12 +124,67 @@ function ProfileRow({ profile, userId }) {
 	);
 }
 
-export default function CustomerShippingProfilesModal({ customer, onClose }) {
-	const userId = customer?.userId;
+export default function AddressBookSection({ userId }) {
 	const { data: profiles = [], isLoading } = useCustomerShippingProfiles(userId);
+	const createProfile = useCreateShippingProfile();
+	const [adding, setAdding] = useState(false);
+	const [form, setForm] = useState(EMPTY_FORM);
+
+	const handleCreate = async () => {
+		try {
+			await createProfile.mutateAsync({ userId, ...form });
+			notifySuccess("Adres eklendi.");
+			setForm(EMPTY_FORM);
+			setAdding(false);
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "Adres eklenemedi.");
+		}
+	};
 
 	return (
-		<Modal open={Boolean(customer)} onClose={onClose} title={customer ? `${customer.name} - Adresler` : "Adresler"}>
+		<div>
+			<div className="mb-2 flex items-center justify-between">
+				<h3 className="font-medium text-text-dark">Adresler</h3>
+				{!adding && (
+					<Button type="button" variant="secondary" onClick={() => setAdding(true)}>
+						<span className="flex items-center gap-1">
+							<Plus size={16} /> Yeni Adres
+						</span>
+					</Button>
+				)}
+			</div>
+
+			{adding && (
+				<div className="mb-3 space-y-2 border border-border-gray p-3">
+					<div className="grid grid-cols-2 gap-2">
+						{FIELDS.map((f) => (
+							<input
+								key={f.name}
+								value={form[f.name] ?? ""}
+								onChange={(e) => setForm((prev) => ({ ...prev, [f.name]: e.target.value }))}
+								placeholder={f.label}
+								className={`${inputClass} text-xs`}
+							/>
+						))}
+					</div>
+					<div className="flex justify-end gap-2">
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() => {
+								setAdding(false);
+								setForm(EMPTY_FORM);
+							}}
+						>
+							İptal
+						</Button>
+						<Button type="button" onClick={handleCreate} isLoading={createProfile.isPending}>
+							Kaydet
+						</Button>
+					</div>
+				</div>
+			)}
+
 			{isLoading ? (
 				<p className="text-sm text-text-light">Yükleniyor...</p>
 			) : profiles.length === 0 ? (
@@ -138,6 +196,6 @@ export default function CustomerShippingProfilesModal({ customer, onClose }) {
 					))}
 				</div>
 			)}
-		</Modal>
+		</div>
 	);
 }

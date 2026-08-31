@@ -14,6 +14,15 @@ export function useCustomerShippingProfiles(userId) {
 	});
 }
 
+export function useCreateShippingProfile() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ userId, ...payload }) => api.post(`/admin/customers/${userId}/shipping-profiles`, payload),
+		onSuccess: (_, variables) =>
+			queryClient.invalidateQueries({ queryKey: ["shippingProfiles", variables.userId] }),
+	});
+}
+
 export function useUpdateShippingProfile() {
 	const queryClient = useQueryClient();
 	return useMutation({
