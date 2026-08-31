@@ -3,21 +3,24 @@
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import FormField, { inputClass, textareaClass } from "@/components/ui/FormField";
-import { useShipment, useUpdateShipment } from "@/hooks/fulfillment/useShipments";
+import FormField, { inputClass, textareaClass, selectClass } from "@/components/ui/FormField";
+import { useShipment, useUpdateShipment, useShipmentStatuses } from "@/hooks/fulfillment/useShipments";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
 export default function ShipmentDetailModal({ shipmentId, onClose }) {
 	const { data: shipment, isLoading } = useShipment(shipmentId);
+	const { data: statuses = [] } = useShipmentStatuses();
 	const updateShipment = useUpdateShipment();
 
 	const [tracking, setTracking] = useState("");
 	const [adminNote, setAdminNote] = useState("");
+	const [shipmentstatusId, setShipmentstatusId] = useState("");
 
 	useEffect(() => {
 		if (shipment) {
 			setTracking(shipment.tracking ?? "");
 			setAdminNote(shipment.extra_informations?.adminNote ?? "");
+			setShipmentstatusId(shipment.shipmentstatusId ? String(shipment.shipmentstatusId) : "");
 		}
 	}, [shipment]);
 
@@ -25,7 +28,12 @@ export default function ShipmentDetailModal({ shipmentId, onClose }) {
 
 	const handleSave = async () => {
 		try {
-			await updateShipment.mutateAsync({ id: shipmentId, tracking, adminNote });
+			await updateShipment.mutateAsync({
+				id: shipmentId,
+				tracking,
+				adminNote,
+				shipmentstatusId: shipmentstatusId ? Number(shipmentstatusId) : null,
+			});
 			notifySuccess("Gönderi güncellendi.");
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Güncelleme başarısız.");
@@ -51,6 +59,17 @@ export default function ShipmentDetailModal({ shipmentId, onClose }) {
 
 					<FormField label="Takip Numarası">
 						<input value={tracking} onChange={(e) => setTracking(e.target.value)} className={inputClass} />
+					</FormField>
+
+					<FormField label="Kargo Durumu">
+						<select value={shipmentstatusId} onChange={(e) => setShipmentstatusId(e.target.value)} className={selectClass}>
+							<option value="">Belirtilmedi</option>
+							{statuses.map((s) => (
+								<option key={s.id} value={s.id}>
+									{s.name}
+								</option>
+							))}
+						</select>
 					</FormField>
 
 					<FormField label="Not">

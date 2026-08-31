@@ -40,4 +40,14 @@ export function useUpdateShipment() {
 	});
 }
 
+export function useShipmentStatuses() {
+	return useQuery({
+		queryKey: ["shipment-statuses"],
+		queryFn: async () => {
+			const { data } = await api.get("/admin/shipment-statuses");
+			return data ?? [];
+		},
+	});
+}
+
 export { PAGE_SIZE };

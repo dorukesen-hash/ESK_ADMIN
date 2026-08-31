@@ -63,8 +63,8 @@ export function useCompleteOrder() {
 		// completeOrder silently no-ops (still 200) if the order is already status 3 or
 		// already has a shipment - there's no way to tell "completed now" from "already
 		// was" apart from the response, so the UI just shows a generic success toast.
-		mutationFn: ({ orderId, carrierId, trackingNumber }) =>
-			api.post("/admin/orders/complete/", { orderId, carrierId, trackingNumber }),
+		mutationFn: ({ orderId, carrierId, trackingNumber, shipmentstatusId }) =>
+			api.post("/admin/orders/complete/", { orderId, carrierId, trackingNumber, shipmentstatusId }),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["orders"] });
 			queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });

@@ -17,6 +17,7 @@ import {
 } from "@/hooks/orders/useOrders";
 import { useOrderStatusList } from "@/hooks/orders/useOrderStatuses";
 import { useCarriers } from "@/hooks/fulfillment/useCarriers";
+import { useShipmentStatuses } from "@/hooks/fulfillment/useShipments";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -38,6 +39,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const { data: order, isLoading } = useOrder(orderId);
 	const { data: statuses = [] } = useOrderStatusList();
 	const { data: carriers = [] } = useCarriers();
+	const { data: shipmentStatuses = [] } = useShipmentStatuses();
 
 	const updateStatus = useUpdateOrderStatus();
 	const completeOrder = useCompleteOrder();
@@ -51,6 +53,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const [confirmingRefund, setConfirmingRefund] = useState(false);
 	const [carrierId, setCarrierId] = useState("");
 	const [trackingNumber, setTrackingNumber] = useState("");
+	const [shipmentstatusId, setShipmentstatusId] = useState("");
 	const [itemNotes, setItemNotes] = useState({});
 	const [showAddressEdit, setShowAddressEdit] = useState(false);
 	const [shippingForm, setShippingForm] = useState({});
@@ -107,7 +110,12 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const handleComplete = async () => {
 		if (!carrierId || !trackingNumber) return;
 		try {
-			await completeOrder.mutateAsync({ orderId, carrierId: Number(carrierId), trackingNumber });
+			await completeOrder.mutateAsync({
+				orderId,
+				carrierId: Number(carrierId),
+				trackingNumber,
+				shipmentstatusId: shipmentstatusId ? Number(shipmentstatusId) : null,
+			});
 			notifySuccess("İşlem tamamlandı.");
 			setShowComplete(false);
 		} catch (error) {
@@ -399,8 +407,17 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							Durumu Kaydet
 						</Button>
 
-						{!order.shipmentId && (
-							<Button variant="secondary" onClick={() => setShowComplete((v) => !v)}>
+						{order.orderstatusId !== 3 && (
+							<Button
+								variant="secondary"
+								onClick={() => {
+									if (!showComplete) {
+										const shipped = shipmentStatuses.find((s) => s.name === "Shipped");
+										if (shipped) setShipmentstatusId(String(shipped.id));
+									}
+									setShowComplete((v) => !v);
+								}}
+							>
 								Siparişi Tamamla
 							</Button>
 						)}
@@ -439,6 +456,20 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									onChange={(e) => setTrackingNumber(e.target.value)}
 									className={inputClass}
 								/>
+							</FormField>
+							<FormField label="Kargo Durumu">
+								<select
+									value={shipmentstatusId}
+									onChange={(e) => setShipmentstatusId(e.target.value)}
+									className={selectClass}
+								>
+									<option value="">Belirtilmedi</option>
+									{shipmentStatuses.map((s) => (
+										<option key={s.id} value={s.id}>
+											{s.name}
+										</option>
+									))}
+								</select>
 							</FormField>
 							<Button
 								onClick={handleComplete}
