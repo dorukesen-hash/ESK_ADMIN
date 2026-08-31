@@ -8,6 +8,7 @@ import OrderDetailModal from "@/components/orders/OrderDetailModal";
 import AccountSection from "@/components/customers/AccountSection";
 import AddressBookSection from "@/components/customers/AddressBookSection";
 import SpecialPricesSection from "@/components/customers/SpecialPricesSection";
+import PricingHistorySection from "@/components/customers/PricingHistorySection";
 import { useCustomerDetail } from "@/hooks/customers/useCustomerDetail";
 
 const ORDER_STATUS_LABELS = {
@@ -82,6 +83,10 @@ export default function CustomerDetailPage({ params }) {
 
 				<section className="border border-border-gray p-4">
 					<SpecialPricesSection userId={customer.userId} />
+				</section>
+
+				<section className="border border-border-gray p-4 tablet:col-span-2">
+					<PricingHistorySection userId={customer.userId} />
 				</section>
 			</div>
 
