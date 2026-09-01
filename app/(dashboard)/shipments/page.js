@@ -39,7 +39,7 @@ export default function ShipmentsPage() {
 					}}
 					className={`${selectClass} max-w-[10rem]`}
 				>
-					<option value="name">İsim</option>
+					<option value="name">Alıcı</option>
 					<option value="trackingnumber">Takip No</option>
 				</select>
 			</div>
@@ -50,13 +50,22 @@ export default function ShipmentsPage() {
 				getRowId={(row) => row.id}
 				emptyMessage="Gönderi bulunamadı"
 				columns={[
-					{ key: "name", header: "Alıcı" },
+					{
+						key: "orderNumber",
+						header: "Sipariş No",
+						render: (row) => (row.orders?.[0] ? `#${row.orders[0].orderNumber}` : "-"),
+					},
+					{
+						key: "name",
+						header: "Alıcı",
+						render: (row) => row.name || row.orders?.[0]?.name || "-",
+					},
 					{ key: "carrier", header: "Kargo Firması", render: (row) => row.carrier?.name ?? "-" },
 					{ key: "tracking", header: "Takip No", render: (row) => row.tracking ?? "-" },
 					{
-						key: "createdAt",
-						header: "Tarih",
-						render: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString("tr-TR") : "-"),
+						key: "note",
+						header: "Not",
+						render: (row) => row.extra_informations?.adminNote || "-",
 					},
 				]}
 				actions={(row) => (

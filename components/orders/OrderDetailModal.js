@@ -242,13 +242,13 @@ export default function OrderDetailModal({ orderId, onClose }) {
 			open={Boolean(orderId)}
 			onClose={onClose}
 			title={order ? `Sipariş #${order.orderNumber}` : "Sipariş"}
-			maxWidth="max-w-2xl"
+			maxWidth="max-w-6xl"
 		>
 			{isLoading || !order ? (
 				<p className="text-sm text-text-light">Yükleniyor...</p>
 			) : (
-				<div className="space-y-6">
-					<div className="grid grid-cols-2 gap-4 text-sm">
+				<div className="max-h-[80vh] space-y-6 overflow-y-auto pr-1">
+					<div className="grid grid-cols-1 gap-4 text-sm tablet:grid-cols-3">
 						<div>
 							<p className="text-text-light">Müşteri</p>
 							<p className="text-text-dark">
@@ -274,10 +274,19 @@ export default function OrderDetailModal({ orderId, onClose }) {
 								{order.city}, {order.state} {order.zip}
 							</p>
 						</div>
+						<div>
+							<p className="text-text-light">Sipariş Bilgisi</p>
+							<p className="text-text-dark">{order.orderstatus?.name ?? "-"}</p>
+							<p className="text-text-light">
+								{order.createdAt ? new Date(order.createdAt).toLocaleDateString("tr-TR") : "-"}
+								{order.trackingNumber ? ` · Takip: ${order.trackingNumber}` : ""}
+							</p>
+						</div>
 					</div>
 
 					{showAddressEdit && (
 						<div className="space-y-4 bg-custom-table-soft-blue p-4">
+						<div className="grid grid-cols-1 gap-6 tablet:grid-cols-2">
 							<div>
 								<p className="mb-2 text-sm font-medium text-text-dark">Kargo Adresi</p>
 								<div className="grid grid-cols-2 gap-3">
@@ -401,8 +410,9 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									</FormField>
 								</div>
 							</div>
+						</div>
 
-							<FormField label="Admin Notu">
+						<FormField label="Admin Notu">
 								<textarea
 									value={adminNote}
 									onChange={(e) => setAdminNote(e.target.value)}
