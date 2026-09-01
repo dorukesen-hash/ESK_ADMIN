@@ -45,6 +45,15 @@ export default function CustomersPage() {
 					{ key: "email", header: "E-posta", render: (row) => row.email ?? "-" },
 					{ key: "phone", header: "Telefon", render: (row) => row.phone ?? "-" },
 					{ key: "city", header: "Şehir", render: (row) => row.city ?? "-" },
+					{
+						key: "isActive",
+						header: "Durum",
+						render: (row) => (
+							<span className={row.isActive ? "text-custom-button-green" : "text-text-light"}>
+								{row.isActive ? "Aktif" : "Pasif"}
+							</span>
+						),
+					},
 				]}
 			/>
 
