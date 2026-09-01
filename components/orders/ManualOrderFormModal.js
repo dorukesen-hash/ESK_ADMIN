@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import FormField, { inputClass, checkboxClass } from "@/components/ui/FormField";
+import FormField, { inputClass, selectClass, checkboxClass } from "@/components/ui/FormField";
 import SearchInput from "@/components/ui/SearchInput";
 import VariantPicker from "@/components/catalog/VariantPicker";
 import { useCustomers } from "@/hooks/customers/useCustomers";
+import { useCarriers } from "@/hooks/fulfillment/useCarriers";
 import { useCreateManualOrder } from "@/hooks/orders/useOrders";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
@@ -18,6 +19,7 @@ const emptyAddress = { name: "", firstline: "", secondline: "", city: "", state:
 // single address entered here (the common case for this kind of order);
 // the backend accepts them independently if that's ever not enough.
 export default function ManualOrderFormModal({ open, onClose }) {
+	const { data: carriers = [] } = useCarriers();
 	const [customerQuery, setCustomerQuery] = useState("");
 	const { data: customerResults } = useCustomers({ search: customerQuery });
 	const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -227,7 +229,14 @@ export default function ManualOrderFormModal({ open, onClose }) {
 
 				<div className="grid grid-cols-2 gap-3">
 					<FormField label="Kargo Firması">
-						<input value={carrierName} onChange={(e) => setCarrierName(e.target.value)} className={inputClass} />
+						<select value={carrierName} onChange={(e) => setCarrierName(e.target.value)} className={selectClass}>
+							<option value="">Seçiniz</option>
+							{carriers.map((c) => (
+								<option key={c.id} value={c.name}>
+									{c.name}
+								</option>
+							))}
+						</select>
 					</FormField>
 					<FormField label="Kargo Ücreti">
 						<input type="number" step="0.01" value={shippingPrice} onChange={(e) => setShippingPrice(e.target.value)} className={inputClass} />
