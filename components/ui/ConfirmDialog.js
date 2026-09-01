@@ -12,10 +12,12 @@ export default function ConfirmDialog({
 	isLoading = false,
 	confirmLabel = "Sil",
 	confirmVariant = "danger",
+	children,
 }) {
 	return (
 		<Modal open={open} onClose={onClose} title={title} maxWidth="max-w-sm">
 			{description && <p className="text-sm text-text-light">{description}</p>}
+			{children && <div className="mt-4">{children}</div>}
 			<div className="mt-6 flex justify-end gap-2">
 				<Button variant="secondary" onClick={onClose} disabled={isLoading}>
 					Vazgeç
