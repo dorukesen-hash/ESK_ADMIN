@@ -236,6 +236,22 @@ export default function OrderDetailModal({ orderId, onClose }) {
 		if (value === null || value === undefined) return "-";
 		return entry.field === "orderstatusId" ? statusName(value) : value;
 	};
+	// Every logOrderChange call already stores the real detail (refund
+	// amount + Stripe refund id, old/new total, manual-order note) in
+	// oldValue/newValue - only status_change was ever actually rendered here,
+	// so a refund's amount was silently logged but invisible in the UI.
+	const formatAuditDetail = (entry) => {
+		if (entry.action === "status_change") {
+			return `${formatAuditValue(entry, entry.oldValue)} -> ${formatAuditValue(entry, entry.newValue)}`;
+		}
+		if (entry.action === "items_edit") {
+			return `$${Number(entry.oldValue ?? 0).toFixed(2)} -> $${Number(entry.newValue ?? 0).toFixed(2)}`;
+		}
+		if (entry.newValue) {
+			return entry.newValue;
+		}
+		return null;
+	};
 
 	return (
 		<Modal
@@ -280,6 +296,24 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							<p className="text-text-light">
 								{order.createdAt ? new Date(order.createdAt).toLocaleDateString("tr-TR") : "-"}
 								{order.trackingNumber ? ` · Takip: ${order.trackingNumber}` : ""}
+							</p>
+						</div>
+						<div>
+							<p className="text-text-light">Ödeme</p>
+							<p className="text-text-dark">
+								${Number(order.price ?? 0).toFixed(2)}{" "}
+								<span className={order.isPaid ? "text-green-600" : "text-red-500"}>
+									({order.isPaid ? "Ödendi" : "Ödenmedi"})
+								</span>
+							</p>
+						</div>
+						<div>
+							<p className="text-text-light">Kargo</p>
+							<p className="text-text-dark">{order.shipment?.carrier?.name ?? "-"}</p>
+							<p className="text-text-light">
+								Ücret: ${Number(order.shipment?.totalPrice ?? 0).toFixed(2)}
+								{order.shipment?.totalWeight ? ` · ${order.shipment.totalWeight} lb` : ""}
+								{order.shipment?.totalDeci ? ` · ${order.shipment.totalDeci} deci` : ""}
 							</p>
 						</div>
 					</div>
@@ -627,11 +661,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									<div key={entry.id} className="flex items-center justify-between text-text-light">
 										<span>
 											{AUDIT_ACTION_LABELS[entry.action] ?? entry.action}
-											{entry.action === "status_change" && (
-												<>
-													: {formatAuditValue(entry, entry.oldValue)} {"->"} {formatAuditValue(entry, entry.newValue)}
-												</>
-											)}
+											{formatAuditDetail(entry) && <>: {formatAuditDetail(entry)}</>}
 											{" · "}
 											{formatAuditUser(entry.actor)}
 										</span>

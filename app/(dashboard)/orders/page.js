@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Download, Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import SearchInput from "@/components/ui/SearchInput";
 import DataTable from "@/components/ui/DataTable";
@@ -203,6 +203,7 @@ export default function OrdersPage() {
 				getRowId={(row) => row.id}
 				emptyMessage="Sipariş bulunamadı"
 				sortState={sortState}
+				onRowClick={(row) => setSelectedOrderId(row.id)}
 				onSortChange={(next) => {
 					setSortState(next);
 					setPage(0);
@@ -252,15 +253,6 @@ export default function OrdersPage() {
 						render: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString("tr-TR") : "-"),
 					},
 				]}
-				actions={(row) => (
-					<button
-						type="button"
-						onClick={() => setSelectedOrderId(row.id)}
-						className="text-text-light hover:text-custom-blue"
-					>
-						<Eye size={16} />
-					</button>
-				)}
 			/>
 
 			<Pagination page={page + 1} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} />
