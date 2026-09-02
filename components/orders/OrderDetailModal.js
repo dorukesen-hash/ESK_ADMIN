@@ -88,7 +88,11 @@ export default function OrderDetailModal({ orderId, onClose }) {
 					quantity: item.quantity,
 				}))
 			);
-			setRefundAmount(order.price ?? "");
+			// Prefill with what's ACTUALLY left to refund (order.amountRemaining,
+			// computed fresh from Stripe), not the original order total - after a
+			// prior partial refund the full price would be wrong and dangerous
+			// to suggest by default.
+			setRefundAmount(order.amountRemaining ?? order.price ?? "");
 
 			setShippingForm({
 				name: order.name ?? "",
@@ -306,6 +310,12 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									({order.isPaid ? "Ödendi" : "Ödenmedi"})
 								</span>
 							</p>
+							{order.amountRefunded > 0 && (
+								<p className="text-text-light">
+									İade Edilen: <span className="text-red-500">${Number(order.amountRefunded).toFixed(2)}</span>
+									{" · "}Kalan: ${Number(order.amountRemaining ?? 0).toFixed(2)}
+								</p>
+							)}
 						</div>
 						<div>
 							<p className="text-text-light">Kargo</p>
