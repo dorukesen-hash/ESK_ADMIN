@@ -56,8 +56,8 @@ export const navSections = [
 		children: [
 			{ label: "Shipments", href: "/shipments" },
 			{ label: "Carriers", href: "/carriers" },
-			{ label: "Carrier Prices", href: "/carrier-prices" },
-			{ label: "Deci Ranges", href: "/deci" },
+			// Carrier Prices removed - never reflected real pricing.
+			// Deci Ranges removed - table was always empty (0 rows).
 			// Shipping Profiles still dropped from this section - see Phase 3
 			// Orders+Fulfillment PR notes (customer-owned data, not admin-managed
 			// in bulk). Phase 5.5 adds a per-customer view under Customers instead.

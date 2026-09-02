@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormField, { selectClass, inputClass, textareaClass } from "@/components/ui/FormField";
+import VariantPicker from "@/components/catalog/VariantPicker";
 import {
 	useOrder,
 	useUpdateOrder,
 	useUpdateOrderStatus,
 	useCompleteOrder,
 	useUpdateOrderItemTracking,
+	useUpdateOrderItems,
 	useRefundOrder,
+	useResendOrderConfirmation,
 	useOrderAuditLog,
 } from "@/hooks/orders/useOrders";
 import { useOrderStatusList } from "@/hooks/orders/useOrderStatuses";
@@ -23,10 +26,13 @@ import { notifySuccess, notifyError } from "@/lib/toast";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const REFUNDED_STATUS_ID = 6;
+const CANCELLED_STATUS_ID = 5;
 
 const AUDIT_ACTION_LABELS = {
 	status_change: "Durum Değişikliği",
 	refund: "İade",
+	items_edit: "Kalemler Düzenlendi",
+	manual_create: "Manuel Sipariş Oluşturuldu",
 };
 
 function formatAuditUser(user) {
@@ -44,17 +50,21 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const updateStatus = useUpdateOrderStatus();
 	const completeOrder = useCompleteOrder();
 	const updateItemNote = useUpdateOrderItemTracking();
+	const updateItems = useUpdateOrderItems();
 	const updateOrder = useUpdateOrder();
 	const refundOrder = useRefundOrder();
+	const resendConfirmation = useResendOrderConfirmation();
 	const { data: auditLog = [] } = useOrderAuditLog(orderId);
 
 	const [statusId, setStatusId] = useState("");
 	const [showComplete, setShowComplete] = useState(false);
 	const [confirmingRefund, setConfirmingRefund] = useState(false);
+	const [refundAmount, setRefundAmount] = useState("");
 	const [carrierId, setCarrierId] = useState("");
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [shipmentstatusId, setShipmentstatusId] = useState("");
 	const [itemNotes, setItemNotes] = useState({});
+	const [editableItems, setEditableItems] = useState([]);
 	const [showAddressEdit, setShowAddressEdit] = useState(false);
 	const [shippingForm, setShippingForm] = useState({});
 	const [billingForm, setBillingForm] = useState({});
@@ -69,6 +79,16 @@ export default function OrderDetailModal({ orderId, onClose }) {
 				notes[item.id] = item.note ?? "";
 			});
 			setItemNotes(notes);
+			setEditableItems(
+				(order.orderitems ?? []).map((item) => ({
+					id: item.id,
+					title: item.title,
+					code: item.code,
+					price: item.price,
+					quantity: item.quantity,
+				}))
+			);
+			setRefundAmount(order.price ?? "");
 
 			setShippingForm({
 				name: order.name ?? "",
@@ -159,12 +179,55 @@ export default function OrderDetailModal({ orderId, onClose }) {
 
 	const handleRefund = async () => {
 		try {
-			await refundOrder.mutateAsync(orderId);
-			notifySuccess("Sipariş iade edildi.");
+			const res = await refundOrder.mutateAsync({ orderId, amount: refundAmount ? Number(refundAmount) : undefined });
+			notifySuccess(
+				res.data?.isFullyRefunded
+					? "Sipariş tamamen iade edildi."
+					: `$${Number(res.data?.amountRefunded ?? 0).toFixed(2)} iade edildi (kısmi).`
+			);
 			setConfirmingRefund(false);
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "İade başarısız.");
 			setConfirmingRefund(false);
+		}
+	};
+
+	const updateEditableItem = (index, field, value) => {
+		setEditableItems((prev) => prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)));
+	};
+
+	const removeEditableItem = (index) => {
+		setEditableItems((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const addEditableItem = (variant) => {
+		setEditableItems((prev) => [...prev, { variantId: variant.id, title: variant.title, code: variant.stock, price: "", quantity: 1 }]);
+	};
+
+	const handleSaveItems = async () => {
+		try {
+			await updateItems.mutateAsync({
+				orderId,
+				items: editableItems.map((it) => ({
+					id: it.id,
+					variantId: it.variantId,
+					title: it.title,
+					price: parseFloat(it.price) || 0,
+					quantity: parseInt(it.quantity, 10) || 1,
+				})),
+			});
+			notifySuccess("Kalemler güncellendi.");
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "Kalemler güncellenemedi.");
+		}
+	};
+
+	const handleResend = async () => {
+		try {
+			await resendConfirmation.mutateAsync(orderId);
+			notifySuccess("Sipariş onay e-postası yeniden gönderildi.");
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "E-posta gönderilemedi.");
 		}
 	};
 
@@ -179,13 +242,13 @@ export default function OrderDetailModal({ orderId, onClose }) {
 			open={Boolean(orderId)}
 			onClose={onClose}
 			title={order ? `Sipariş #${order.orderNumber}` : "Sipariş"}
-			maxWidth="max-w-2xl"
+			maxWidth="max-w-6xl"
 		>
 			{isLoading || !order ? (
 				<p className="text-sm text-text-light">Yükleniyor...</p>
 			) : (
-				<div className="space-y-6">
-					<div className="grid grid-cols-2 gap-4 text-sm">
+				<div className="max-h-[80vh] space-y-6 overflow-y-auto pr-1">
+					<div className="grid grid-cols-1 gap-4 text-sm tablet:grid-cols-3">
 						<div>
 							<p className="text-text-light">Müşteri</p>
 							<p className="text-text-dark">
@@ -211,10 +274,19 @@ export default function OrderDetailModal({ orderId, onClose }) {
 								{order.city}, {order.state} {order.zip}
 							</p>
 						</div>
+						<div>
+							<p className="text-text-light">Sipariş Bilgisi</p>
+							<p className="text-text-dark">{order.orderstatus?.name ?? "-"}</p>
+							<p className="text-text-light">
+								{order.createdAt ? new Date(order.createdAt).toLocaleDateString("tr-TR") : "-"}
+								{order.trackingNumber ? ` · Takip: ${order.trackingNumber}` : ""}
+							</p>
+						</div>
 					</div>
 
 					{showAddressEdit && (
 						<div className="space-y-4 bg-custom-table-soft-blue p-4">
+						<div className="grid grid-cols-1 gap-6 tablet:grid-cols-2">
 							<div>
 								<p className="mb-2 text-sm font-medium text-text-dark">Kargo Adresi</p>
 								<div className="grid grid-cols-2 gap-3">
@@ -338,8 +410,9 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									</FormField>
 								</div>
 							</div>
+						</div>
 
-							<FormField label="Admin Notu">
+						<FormField label="Admin Notu">
 								<textarea
 									value={adminNote}
 									onChange={(e) => setAdminNote(e.target.value)}
@@ -359,48 +432,95 @@ export default function OrderDetailModal({ orderId, onClose }) {
 					<div>
 						<p className="mb-2 text-sm font-medium text-text-dark">Ürünler</p>
 						<div className="space-y-3">
-							{(order.orderitems ?? []).map((item) => (
+							{editableItems.map((item, index) => (
 								<div
-									key={item.id}
+									key={item.id ?? `new-${index}`}
 									className="flex items-start justify-between gap-4 border-b border-border-gray pb-3"
 								>
-									<div className="text-sm">
-										<p className="text-text-dark">{item.title}</p>
-										<p className="text-text-light">
-											{item.code} · {item.quantity} adet · ${item.price}
+									<div className="flex-1 text-sm">
+										<p className="text-text-dark">
+											{item.title} <span className="text-text-light">({item.code})</span>
 										</p>
-									</div>
-									<div className="flex w-56 shrink-0 items-start gap-2">
-										<textarea
-											value={itemNotes[item.id] ?? ""}
-											onChange={(e) =>
-												setItemNotes((prev) => ({ ...prev, [item.id]: e.target.value }))
-											}
-											rows={2}
-											placeholder="Not..."
-											className={`${textareaClass} text-xs`}
-										/>
-										<button
-											type="button"
-											onClick={() => handleSaveItemNote(item.id)}
-											className="mt-1 text-text-light hover:text-custom-blue"
-										>
-											<Save size={16} />
-										</button>
+										<div className="mt-1 flex items-center gap-2">
+											<input
+												type="number"
+												min="1"
+												value={item.quantity}
+												onChange={(e) => updateEditableItem(index, "quantity", e.target.value)}
+												className={`${inputClass} w-16`}
+											/>
+											<span className="text-text-light">adet ×</span>
+											<input
+												type="number"
+												step="0.01"
+												value={item.price}
+												onChange={(e) => updateEditableItem(index, "price", e.target.value)}
+												className={`${inputClass} w-24`}
+											/>
+											<button
+												type="button"
+												onClick={() => removeEditableItem(index)}
+												className="text-text-light hover:text-red-600"
+											>
+												<Trash2 size={14} />
+											</button>
+										</div>
+										{item.id && (
+											<div className="mt-2 flex items-start gap-2">
+												<textarea
+													value={itemNotes[item.id] ?? ""}
+													onChange={(e) =>
+														setItemNotes((prev) => ({ ...prev, [item.id]: e.target.value }))
+													}
+													rows={1}
+													placeholder="Not..."
+													className={`${textareaClass} text-xs`}
+												/>
+												<button
+													type="button"
+													onClick={() => handleSaveItemNote(item.id)}
+													className="text-text-light hover:text-custom-blue"
+												>
+													<Save size={16} />
+												</button>
+											</div>
+										)}
 									</div>
 								</div>
 							))}
+						</div>
+						<div className="mt-3">
+							<VariantPicker onSelect={addEditableItem} placeholder="Ürün ekle..." />
+						</div>
+						<div className="mt-3 flex items-center justify-between">
+							<p className="text-xs text-text-light">
+								Kalem değişiklikleri Stripe ödemesine otomatik yansımaz - fark varsa iade/ek tahsilat elle
+								yapılmalı.
+							</p>
+							<Button onClick={handleSaveItems} isLoading={updateItems.isPending}>
+								Kalemleri Kaydet
+							</Button>
 						</div>
 					</div>
 
 					<div className="flex flex-wrap items-end gap-4 border-t border-border-gray pt-4">
 						<FormField label="Durum">
 							<select value={statusId} onChange={(e) => setStatusId(e.target.value)} className={selectClass}>
-								{statuses.map((s) => (
-									<option key={s.id} value={s.id}>
-										{s.name}
-									</option>
-								))}
+								{statuses.map((s) => {
+									const isCancelledLocked =
+										s.id === CANCELLED_STATUS_ID && order.isPaid && order.orderstatusId !== REFUNDED_STATUS_ID;
+									return (
+										<option
+											key={s.id}
+											value={s.id}
+											disabled={isCancelledLocked}
+											title={isCancelledLocked ? "Ödenmiş sipariş - önce iade edin" : undefined}
+										>
+											{s.name}
+											{isCancelledLocked ? " (önce iade edin)" : ""}
+										</option>
+									);
+								})}
 							</select>
 						</FormField>
 						<Button onClick={handleStatusSave} isLoading={updateStatus.isPending} disabled={!statusId}>
@@ -436,6 +556,24 @@ export default function OrderDetailModal({ orderId, onClose }) {
 						>
 							Fatura PDF
 						</a>
+
+						<a
+							href={`${API_URL}/invoices/packing-slip/${order.id}`}
+							target="_blank"
+							rel="noreferrer"
+							className="text-sm text-custom-blue hover:underline"
+						>
+							Fişi Yazdır
+						</a>
+
+						<button
+							type="button"
+							onClick={handleResend}
+							disabled={resendConfirmation.isPending}
+							className="text-sm text-custom-blue hover:underline disabled:opacity-50"
+						>
+							E-postayı Yeniden Gönder
+						</button>
 					</div>
 
 					{showComplete && (
@@ -511,11 +649,22 @@ export default function OrderDetailModal({ orderId, onClose }) {
 				onClose={() => setConfirmingRefund(false)}
 				onConfirm={handleRefund}
 				title="Siparişi iade et"
-				description="Bu siparişin ödemesi Stripe üzerinden iade edilecek ve durumu 'Refunded' olarak güncellenecek. Bu işlem geri alınamaz. Devam etmek istediğinize emin misiniz?"
+				description="Bu tutar Stripe üzerinden iade edilecek. Tam tutar iade edilirse durum 'Refunded' olur; kısmi iade durumu değiştirmez. Bu işlem geri alınamaz."
 				confirmLabel="İade Et"
 				confirmVariant="danger"
 				isLoading={refundOrder.isPending}
-			/>
+			>
+				<FormField label="İade Tutarı ($)">
+					<input
+						type="number"
+						step="0.01"
+						min="0.01"
+						value={refundAmount}
+						onChange={(e) => setRefundAmount(e.target.value)}
+						className={inputClass}
+					/>
+				</FormField>
+			</ConfirmDialog>
 		</Modal>
 	);
 }

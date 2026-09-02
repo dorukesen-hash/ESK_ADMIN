@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import CarrierFormModal from "@/components/fulfillment/CarrierFormModal";
 import {
-	useCarriers,
+	useCarrierStats,
 	useCreateCarrier,
 	useUpdateCarrier,
 	useDeleteCarrier,
@@ -20,7 +20,7 @@ export default function CarriersPage() {
 	const [editingCarrier, setEditingCarrier] = useState(null);
 	const [deletingCarrier, setDeletingCarrier] = useState(null);
 
-	const { data: carriers = [], isLoading } = useCarriers();
+	const { data: carriers = [], isLoading } = useCarrierStats();
 	const createCarrier = useCreateCarrier();
 	const updateCarrier = useUpdateCarrier();
 	const deleteCarrier = useDeleteCarrier();
@@ -79,8 +79,13 @@ export default function CarriersPage() {
 				getRowId={(row) => row.id}
 				emptyMessage="Kargo firması bulunamadı"
 				columns={[
-					{ key: "name", header: "İsim" },
-					{ key: "vkn", header: "VKN", render: (row) => row.vkn ?? "-" },
+					{ key: "name", header: "Sağlayıcı" },
+					{ key: "shipmentCount", header: "Gönderi Sayısı", render: (row) => row.shipmentCount ?? 0 },
+					{
+						key: "totalPaid",
+						header: "Toplam Ödenen",
+						render: (row) => `$${parseFloat(row.totalPaid ?? 0).toFixed(2)}`,
+					},
 				]}
 				actions={(row) => (
 					<div className="flex justify-end gap-3">
