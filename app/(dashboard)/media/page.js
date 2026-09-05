@@ -10,8 +10,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import AttachImagesModal from "@/components/media/AttachImagesModal";
 import { useImages, useUploadImage, useDeleteImages } from "@/hooks/media/useImages";
 import { notifySuccess, notifyError } from "@/lib/toast";
-
-const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+import { cdnUrl } from "@/lib/cdn";
 
 export default function MediaPage() {
 	const [search, setSearch] = useState("");
@@ -123,7 +122,7 @@ export default function MediaPage() {
 								}`}
 							>
 								<Image
-									src={`${CDN_URL}/${img.url}`}
+									src={cdnUrl(img.url)}
 									alt=""
 									fill
 									sizes="(max-width: 768px) 33vw, 200px"

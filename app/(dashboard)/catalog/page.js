@@ -46,8 +46,7 @@ import {
 	PAGE_SIZE,
 } from "@/hooks/catalog/useVariants";
 import { notifySuccess, notifyError } from "@/lib/toast";
-
-const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+import { cdnUrl } from "@/lib/cdn";
 
 export default function CatalogPage() {
 	const router = useRouter();
@@ -499,7 +498,7 @@ export default function CatalogPage() {
 						<div className="flex flex-wrap gap-3">
 							{detailImages.map((img) => (
 								<div key={img.id} className="relative h-20 w-20 overflow-hidden border border-border-gray bg-button-gray">
-									{img.url && <NextImage src={`${CDN_URL}/${img.url}`} alt="" fill sizes="80px" className="object-cover" />}
+									{img.url && <NextImage src={cdnUrl(img.url)} alt="" fill sizes="80px" className="object-cover" />}
 								</div>
 							))}
 							<button

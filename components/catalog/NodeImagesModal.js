@@ -8,8 +8,7 @@ import Button from "@/components/ui/Button";
 import SearchInput from "@/components/ui/SearchInput";
 import { useImages, useUploadImage, useAttachImages } from "@/hooks/media/useImages";
 import { notifySuccess, notifyError } from "@/lib/toast";
-
-const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+import { cdnUrl } from "@/lib/cdn";
 
 // Manage a category/subcategory/product's images inline, without leaving the
 // Catalog browser. /admin/images/attach REPLACES a target's entire image set
@@ -149,7 +148,7 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 										}`}
 									>
 										<Image
-											src={`${CDN_URL}/${img.url}`}
+											src={cdnUrl(img.url)}
 											alt=""
 											fill
 											sizes="120px"
@@ -215,7 +214,7 @@ export default function NodeImagesModal({ open, onClose, target, targetId, curre
 									}`}
 								>
 									<Image
-										src={`${CDN_URL}/${img.url}`}
+										src={cdnUrl(img.url)}
 										alt=""
 										fill
 										sizes="120px"

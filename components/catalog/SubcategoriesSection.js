@@ -5,8 +5,7 @@ import NextImage from "next/image";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import DataTable from "@/components/ui/DataTable";
 import Button from "@/components/ui/Button";
-
-const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+import { cdnUrl } from "@/lib/cdn";
 
 // getSubCategoriesforAdmin already nests each subcategory's own `variants`
 // and `products` arrays, so the product count here is precise (direct-only,
@@ -23,7 +22,7 @@ export default function SubcategoriesSection({ subcategories, isLoading, onSelec
 				// imgurl's exact format isn't confirmed (may already be absolute), so only
 				// prefix the CDN host onto a relative path.
 				const rawUrl = sub.subcategory_images?.[0]?.image?.url ?? sub.imgurl ?? null;
-				const thumbUrl = rawUrl ? (rawUrl.startsWith("http") ? rawUrl : `${CDN_URL}/${rawUrl}`) : null;
+				const thumbUrl = cdnUrl(rawUrl);
 				return {
 					...sub,
 					productCount: sub.products?.length ?? 0,
