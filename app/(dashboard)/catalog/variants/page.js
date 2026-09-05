@@ -21,8 +21,7 @@ import VariantHistoryModal from "@/components/catalog/VariantHistoryModal";
 import BulkEditModal from "@/components/catalog/BulkEditModal";
 import NodeImagesModal from "@/components/catalog/NodeImagesModal";
 import { notifyError } from "@/lib/toast";
-
-const CDN_URL = process.env.NEXT_PUBLIC_CDN_URL;
+import { cdnUrl } from "@/lib/cdn";
 
 // Pinned columns, left to right - order matters (getStart('left') sums the
 // size of every pinned column BEFORE this one, so this array's order is what
@@ -70,7 +69,7 @@ function VariantImageCell({ variant, onOpen }) {
 				// often-huge original down to 20px server-side instead of shipping
 				// the full file for a table-cell thumbnail.
 				<Image
-					src={`${CDN_URL}/${first.url}`}
+					src={cdnUrl(first.url)}
 					alt=""
 					width={20}
 					height={20}
