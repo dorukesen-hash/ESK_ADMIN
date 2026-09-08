@@ -33,6 +33,9 @@ const AUDIT_ACTION_LABELS = {
 	refund: "İade",
 	items_edit: "Kalemler Düzenlendi",
 	manual_create: "Manuel Sipariş Oluşturuldu",
+	email_sent: "Onay E-postası",
+	email_failed: "E-posta Gönderilemedi",
+	price_mismatch: "Fiyat Uyuşmazlığı",
 };
 
 function formatAuditUser(user) {
@@ -316,6 +319,16 @@ export default function OrderDetailModal({ orderId, onClose }) {
 									{" · "}Kalan: ${Number(order.amountRemaining ?? 0).toFixed(2)}
 								</p>
 							)}
+							{order.discount_code && (
+								<p className="text-text-light">
+									İndirim: {order.discount_code.code} (-${Number(order.discountAmount ?? 0).toFixed(2)})
+								</p>
+							)}
+							<p className="text-text-light">
+								{order.transactions?.[0]
+									? `Ödeme: ${order.transactions[0].payment_method || "-"} · ${order.transactions[0].payment_id || "-"}`
+									: "Ödeme: Manuel (Stripe dışı)"}
+							</p>
 						</div>
 						<div>
 							<p className="text-text-light">Kargo</p>
@@ -592,14 +605,21 @@ export default function OrderDetailModal({ orderId, onClose }) {
 							</Button>
 						)}
 
-						<a
-							href={`${API_URL}/invoices/pdf/${order.id}`}
-							target="_blank"
-							rel="noreferrer"
-							className="text-sm text-custom-blue hover:underline"
-						>
-							Fatura PDF
-						</a>
+						<div className="flex flex-col">
+							{order.invoice && (
+								<span className="text-xs text-text-light">
+									{order.invoice.documentNumber} · {new Date(order.invoice.issueDate).toLocaleDateString("tr-TR")}
+								</span>
+							)}
+							<a
+								href={`${API_URL}/invoices/pdf/${order.id}`}
+								target="_blank"
+								rel="noreferrer"
+								className="text-sm text-custom-blue hover:underline"
+							>
+								Fatura PDF
+							</a>
+						</div>
 
 						<a
 							href={`${API_URL}/invoices/packing-slip/${order.id}`}
