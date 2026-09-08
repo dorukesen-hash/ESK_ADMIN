@@ -28,7 +28,7 @@ export default function VariantPicker({ onSelect, excludeIds = [], placeholder =
 							}}
 							className="block w-full px-3 py-2 text-left text-sm text-text-dark hover:bg-custom-table-soft-blue"
 						>
-							{v.title} <span className="text-text-light">({v.stock})</span>
+							{v.title} <span className="text-text-light">({v.sku})</span>
 						</button>
 					))}
 				</div>

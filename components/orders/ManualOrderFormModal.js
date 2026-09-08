@@ -56,7 +56,7 @@ export default function ManualOrderFormModal({ open, onClose }) {
 	};
 
 	const addItem = (variant) => {
-		setItems((prev) => [...prev, { variantId: variant.id, title: variant.title, stock: variant.stock, price: "", quantity: 1 }]);
+		setItems((prev) => [...prev, { variantId: variant.id, title: variant.title, sku: variant.sku, price: "", quantity: 1 }]);
 	};
 
 	const updateItem = (index, field, value) => {
@@ -197,7 +197,7 @@ export default function ManualOrderFormModal({ open, onClose }) {
 								{items.map((item, index) => (
 									<tr key={index} className="border-b border-border-gray">
 										<td className="py-2">
-											{item.title} <span className="text-text-light">({item.stock})</span>
+											{item.title} <span className="text-text-light">({item.sku})</span>
 										</td>
 										<td className="w-20 py-2">
 											<input

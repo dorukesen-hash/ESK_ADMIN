@@ -234,7 +234,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	};
 
 	const addEditableItem = (variant) => {
-		setEditableItems((prev) => [...prev, { variantId: variant.id, title: variant.title, code: variant.stock, price: "", quantity: 1 }]);
+		setEditableItems((prev) => [...prev, { variantId: variant.id, title: variant.title, code: variant.sku, price: "", quantity: 1 }]);
 	};
 
 	const handleSaveItems = async () => {

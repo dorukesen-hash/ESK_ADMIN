@@ -48,7 +48,7 @@ export default function VariantsSection({
 				onRowClick={(row) => onEdit(row)}
 				columns={[
 					{ key: "title", header: "Variant Name" },
-					{ key: "stock", header: "SKU" },
+					{ key: "sku", header: "SKU" },
 					{ key: "one_four_units", header: "Price", render: (row) => row.one_four_units ?? "-" },
 				]}
 				actions={(row) => (

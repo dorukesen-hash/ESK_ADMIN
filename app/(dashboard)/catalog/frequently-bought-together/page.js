@@ -75,7 +75,7 @@ export default function FrequentlyBoughtTogetherPage() {
 											className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-custom-table-soft-blue"
 										>
 											<span className="text-sm text-text-dark">
-												{v.title} <span className="text-text-light">({v.stock})</span>
+												{v.title} <span className="text-text-light">({v.sku})</span>
 											</span>
 											<span className="text-sm text-text-light">{v.targetCount} varyant</span>
 										</button>
@@ -103,7 +103,7 @@ export default function FrequentlyBoughtTogetherPage() {
 					</button>
 
 					<h2 className="font-montserrat text-base font-semibold text-text-dark">
-						{source.title} <span className="text-text-light">({source.stock})</span>
+						{source.title} <span className="text-text-light">({source.sku})</span>
 					</h2>
 
 					<ul className="mt-4 divide-y divide-border-gray">
@@ -114,7 +114,7 @@ export default function FrequentlyBoughtTogetherPage() {
 						{featured.map((item) => (
 							<li key={item.target_id} className="flex items-center justify-between py-2">
 								<span className="text-sm text-text-dark">
-									{item.target?.title} <span className="text-text-light">({item.target?.stock})</span>
+									{item.target?.title} <span className="text-text-light">({item.target?.sku})</span>
 								</span>
 								<button
 									type="button"

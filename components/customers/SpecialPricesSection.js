@@ -48,7 +48,7 @@ export default function SpecialPricesSection({ userId }) {
 					{pickedVariant ? (
 						<div className="flex items-center justify-between border border-border-gray px-3 py-2 text-sm">
 							<span>
-								{pickedVariant.title} <span className="text-text-light">({pickedVariant.stock})</span>
+								{pickedVariant.title} <span className="text-text-light">({pickedVariant.sku})</span>
 							</span>
 							<button type="button" onClick={() => setPickedVariant(null)} className="text-text-light hover:text-text-dark">
 								✕
@@ -86,7 +86,7 @@ export default function SpecialPricesSection({ userId }) {
 							<tr key={o.id} className="border-b border-border-gray">
 								<td className="py-2">
 									{o.variant?.title ?? `Varyant #${o.variantId}`}{" "}
-									<span className="text-text-light">({o.variant?.stock})</span>
+									<span className="text-text-light">({o.variant?.sku})</span>
 								</td>
 								<td className="py-2 text-right font-medium">${parseFloat(o.price).toFixed(2)}</td>
 								<td className="w-8 py-2 text-right">
