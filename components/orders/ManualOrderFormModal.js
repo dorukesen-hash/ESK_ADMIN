@@ -32,6 +32,7 @@ export default function ManualOrderFormModal({ open, onClose }) {
 	const [shippingPrice, setShippingPrice] = useState("0");
 	const [isPaid, setIsPaid] = useState(true);
 	const [paymentNote, setPaymentNote] = useState("");
+	const [discountCode, setDiscountCode] = useState("");
 
 	const createManualOrder = useCreateManualOrder();
 
@@ -46,6 +47,7 @@ export default function ManualOrderFormModal({ open, onClose }) {
 		setShippingPrice("0");
 		setIsPaid(true);
 		setPaymentNote("");
+		setDiscountCode("");
 	};
 
 	const handleClose = () => {
@@ -103,6 +105,7 @@ export default function ManualOrderFormModal({ open, onClose }) {
 				items: items.map((it) => ({ variantId: it.variantId, price: parseFloat(it.price) || 0, quantity: parseInt(it.quantity, 10) || 1 })),
 				isPaid,
 				paymentNote,
+				discountCode: discountCode.trim() || undefined,
 			});
 			notifySuccess("Sipariş oluşturuldu.");
 			handleClose();
@@ -250,6 +253,15 @@ export default function ManualOrderFormModal({ open, onClose }) {
 
 				<FormField label="Ödeme Notu (ör. Havale/EFT, çek no...)">
 					<input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} className={inputClass} />
+				</FormField>
+
+				<FormField label="İndirim Kodu (opsiyonel)">
+					<input
+						value={discountCode}
+						onChange={(e) => setDiscountCode(e.target.value)}
+						placeholder="örn. WELCOME10"
+						className={inputClass}
+					/>
 				</FormField>
 
 				<div className="flex items-center justify-between border-t border-border-gray pt-3">
