@@ -99,7 +99,7 @@ export default function MassEditModal({ open, onClose }) {
 									<thead className="bg-custom-table-head">
 										<tr>
 											<th className="px-2 py-1 text-left">Row</th>
-											<th className="px-2 py-1 text-left">Stock #</th>
+											<th className="px-2 py-1 text-left">SKU</th>
 											<th className="px-2 py-1 text-left">Reason</th>
 										</tr>
 									</thead>
@@ -107,7 +107,7 @@ export default function MassEditModal({ open, onClose }) {
 										{result.failed.map((f, i) => (
 											<tr key={i} className="border-t border-border-gray">
 												<td className="px-2 py-1 align-top">{f.row}</td>
-												<td className="px-2 py-1 align-top">{f.stock}</td>
+												<td className="px-2 py-1 align-top">{f.sku}</td>
 												<td className="px-2 py-1 align-top">{f.reason}</td>
 											</tr>
 										))}

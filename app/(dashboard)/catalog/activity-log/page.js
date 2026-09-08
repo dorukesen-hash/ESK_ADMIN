@@ -75,7 +75,7 @@ export default function ActivityLogPage() {
 						render: (row) =>
 							row.variant ? (
 								<>
-									{row.variant.title} <span className="text-text-light">({row.variant.stock})</span>
+									{row.variant.title} <span className="text-text-light">({row.variant.sku})</span>
 								</>
 							) : (
 								<span className="italic text-text-light">(deleted variant)</span>

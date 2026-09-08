@@ -20,7 +20,7 @@ export const VARIANT_FIELD_GROUPS = [
 		label: "Basic",
 		fields: [
 			{ key: "title", label: "Title", type: "text" },
-			{ key: "stock", label: "SKU", type: "text" },
+			{ key: "sku", label: "SKU", type: "text" },
 			{ key: "status", label: "Status", type: "text" },
 			{ key: "available", label: "Available", type: "boolean" },
 			{ key: "description", label: "Description", type: "text" },
@@ -156,7 +156,7 @@ export const ALL_VARIANT_FIELDS = VARIANT_FIELD_GROUPS.flatMap((g) => g.fields);
 
 export const DEFAULT_VISIBLE_KEYS = [
 	"title",
-	"stock",
+	"sku",
 	"status",
 	"available",
 	"one_four_units",

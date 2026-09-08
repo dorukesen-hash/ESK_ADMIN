@@ -69,7 +69,7 @@ export default function AttachImagesModal({ open, onClose, imageIds, onDone }) {
 						{selectedVariant ? (
 							<div className="flex items-center justify-between border border-border-gray px-3 py-2 text-sm text-text-dark">
 								<span>
-									{selectedVariant.title} <span className="text-text-light">({selectedVariant.stock})</span>
+									{selectedVariant.title} <span className="text-text-light">({selectedVariant.sku})</span>
 								</span>
 								<button
 									type="button"

@@ -14,7 +14,7 @@ import FormField, { inputClass, checkboxClass } from "@/components/ui/FormField"
 // integer"). Enforce whole numbers here rather than let the request 500.
 const schema = yup.object({
 	title: yup.string().required("Başlık zorunlu"),
-	stock: yup.string().nullable(),
+	sku: yup.string().nullable(),
 	one_four_units: yup
 		.number()
 		.integer("Tam sayı olmalı")
@@ -49,7 +49,7 @@ export default function VariantQuickEditModal({ open, onClose, variant, onSubmit
 		if (open && variant) {
 			reset({
 				title: variant.title ?? "",
-				stock: variant.stock ?? "",
+				sku: variant.sku ?? "",
 				one_four_units: variant.one_four_units ?? "",
 				five_nine_units: variant.five_nine_units ?? "",
 				ten_plus_units: variant.ten_plus_units ?? "",
@@ -67,8 +67,8 @@ export default function VariantQuickEditModal({ open, onClose, variant, onSubmit
 					<input {...register("title")} className={inputClass} autoFocus />
 				</FormField>
 
-				<FormField label="Stok #" error={errors.stock}>
-					<input {...register("stock")} className={inputClass} />
+				<FormField label="SKU" error={errors.sku}>
+					<input {...register("sku")} className={inputClass} />
 				</FormField>
 
 				<div className="grid grid-cols-3 gap-3">

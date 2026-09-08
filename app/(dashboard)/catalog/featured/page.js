@@ -90,7 +90,7 @@ export default function FeaturedPage() {
 								<div className="flex items-center gap-3">
 									<span className="w-6 text-center text-sm text-text-light">{index + 1}</span>
 									<span className="text-sm text-text-dark">
-										{variant.title} <span className="text-text-light">({variant.stock})</span>
+										{variant.title} <span className="text-text-light">({variant.sku})</span>
 									</span>
 								</div>
 								<div className="flex items-center gap-2">
