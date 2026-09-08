@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Undo2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -15,6 +15,7 @@ import {
 	useUpdateOrderItemTracking,
 	useUpdateOrderItems,
 	useRefundOrder,
+	useRefundOrderItem,
 	useResendOrderConfirmation,
 	useOrderAuditLog,
 } from "@/hooks/orders/useOrders";
@@ -36,6 +37,7 @@ const AUDIT_ACTION_LABELS = {
 	email_sent: "Onay E-postası",
 	email_failed: "E-posta Gönderilemedi",
 	price_mismatch: "Fiyat Uyuşmazlığı",
+	item_refund: "Kalem İadesi",
 };
 
 function formatAuditUser(user) {
@@ -56,6 +58,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const updateItems = useUpdateOrderItems();
 	const updateOrder = useUpdateOrder();
 	const refundOrder = useRefundOrder();
+	const refundOrderItem = useRefundOrderItem();
 	const resendConfirmation = useResendOrderConfirmation();
 	const { data: auditLog = [] } = useOrderAuditLog(orderId);
 
@@ -67,6 +70,7 @@ export default function OrderDetailModal({ orderId, onClose }) {
 	const [trackingNumber, setTrackingNumber] = useState("");
 	const [shipmentstatusId, setShipmentstatusId] = useState("");
 	const [itemNotes, setItemNotes] = useState({});
+	const [itemRefundQty, setItemRefundQty] = useState({});
 	const [editableItems, setEditableItems] = useState([]);
 	const [showAddressEdit, setShowAddressEdit] = useState(false);
 	const [shippingForm, setShippingForm] = useState({});
@@ -181,6 +185,28 @@ export default function OrderDetailModal({ orderId, onClose }) {
 			notifySuccess("Not kaydedildi.");
 		} catch (error) {
 			notifyError(error?.response?.data?.message || "Not kaydedilemedi.");
+		}
+	};
+
+	// Refunded quantity for an item comes from the ORIGINAL order data
+	// (order.orderitems), not editableItems - refunds never change quantity/
+	// price on the item itself, so this is always sourced independently.
+	const getItemRefundInfo = (itemId) => {
+		const original = order?.orderitems?.find((oi) => oi.id === itemId);
+		const refunds = original?.order_item_refunds ?? [];
+		const refundedQty = refunds.reduce((sum, r) => sum + r.quantity, 0);
+		return { refundedQty, originalQty: original?.quantity ?? 0 };
+	};
+
+	const handleRefundItem = async (itemId) => {
+		const qty = parseInt(itemRefundQty[itemId], 10);
+		if (!qty || qty <= 0) return;
+		try {
+			await refundOrderItem.mutateAsync({ orderId, itemId, quantity: qty });
+			notifySuccess("Kalem iade edildi.");
+			setItemRefundQty((prev) => ({ ...prev, [itemId]: "" }));
+		} catch (error) {
+			notifyError(error?.response?.data?.message || "İade başarısız.");
 		}
 	};
 
@@ -542,6 +568,41 @@ export default function OrderDetailModal({ orderId, onClose }) {
 												</button>
 											</div>
 										)}
+										{item.id && (() => {
+											const { refundedQty, originalQty } = getItemRefundInfo(item.id);
+											const remaining = originalQty - refundedQty;
+											return (
+												<div className="mt-2 flex items-center gap-2">
+													{refundedQty > 0 && (
+														<span className="text-xs text-red-500">{refundedQty} adet iade edildi</span>
+													)}
+													{remaining > 0 && (
+														<>
+															<input
+																type="number"
+																min="1"
+																max={remaining}
+																placeholder={`maks. ${remaining}`}
+																value={itemRefundQty[item.id] ?? ""}
+																onChange={(e) =>
+																	setItemRefundQty((prev) => ({ ...prev, [item.id]: e.target.value }))
+																}
+																className={`${inputClass} w-20 text-xs`}
+															/>
+															<button
+																type="button"
+																onClick={() => handleRefundItem(item.id)}
+																disabled={refundOrderItem.isPending}
+																className="text-text-light hover:text-red-600"
+																title="Bu kalemden iade et"
+															>
+																<Undo2 size={14} />
+															</button>
+														</>
+													)}
+												</div>
+											);
+										})()}
 									</div>
 								</div>
 							))}

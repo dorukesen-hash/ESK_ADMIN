@@ -97,6 +97,18 @@ export function useRefundOrder() {
 	});
 }
 
+export function useRefundOrderItem() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ orderId, itemId, quantity }) => api.post(`/admin/orders/${orderId}/items/${itemId}/refund`, { quantity }),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({ queryKey: ["orders"] });
+			queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
+			queryClient.invalidateQueries({ queryKey: ["order-audit-log", variables.orderId] });
+		},
+	});
+}
+
 export function useOrderAuditLog(orderId) {
 	return useQuery({
 		queryKey: ["order-audit-log", orderId],
