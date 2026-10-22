@@ -3,52 +3,28 @@
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import FormField, { selectClass } from "@/components/ui/FormField";
+import FormField from "@/components/ui/FormField";
+import CatalogNodePicker from "./CatalogNodePicker";
 
-const HIERARCHY_LABELS = {
-	category: "Kategori",
-	subcategory: "Alt Kategori",
-	product: "Ürün",
-};
-
-// initialHierarchy: { type: 'category'|'subcategory'|'product', id, label } -
-// when set (opened from within a Catalog section), the target is pre-filled
-// and locked instead of requiring the manual picker below.
-export default function VariantExcelUploadModal({
-	open,
-	onClose,
-	categories,
-	subcategories,
-	products,
-	initialHierarchy,
-	onSubmit,
-	isLoading,
-}) {
-	const [hierarchyType, setHierarchyType] = useState("category");
-	const [hierarchyId, setHierarchyId] = useState("");
+// initialNode: { id, label } - when set (opened from within a node's own
+// page), the target is pre-filled and locked instead of requiring the
+// manual picker below.
+export default function VariantExcelUploadModal({ open, onClose, tree, initialNode, onSubmit, isLoading }) {
+	const [nodeId, setNodeId] = useState("");
 	const [file, setFile] = useState(null);
 
-	const locked = Boolean(initialHierarchy);
+	const locked = Boolean(initialNode);
 
 	useEffect(() => {
 		if (!open) return;
-		if (initialHierarchy) {
-			setHierarchyType(initialHierarchy.type);
-			setHierarchyId(String(initialHierarchy.id));
-		} else {
-			setHierarchyType("category");
-			setHierarchyId("");
-		}
+		setNodeId(initialNode ? String(initialNode.id) : "");
 		setFile(null);
-	}, [open, initialHierarchy]);
-
-	const options = { category: categories, subcategory: subcategories, product: products }[hierarchyType];
-	const optionLabel = (opt) => opt.name ?? opt.title;
+	}, [open, initialNode]);
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		if (!file || !hierarchyId) return;
-		onSubmit({ file, hierarchyType, hierarchyId });
+		if (!file || !nodeId) return;
+		onSubmit({ file, hierarchyType: "node", hierarchyId: nodeId });
 	};
 
 	return (
@@ -57,39 +33,13 @@ export default function VariantExcelUploadModal({
 				{locked ? (
 					<FormField label="Hedef">
 						<div className="border border-border-gray bg-button-gray px-3 py-2 text-sm text-text-dark">
-							{HIERARCHY_LABELS[initialHierarchy.type]}: {initialHierarchy.label}
+							{initialNode.label}
 						</div>
 					</FormField>
 				) : (
-					<>
-						<FormField label="Hedef Tipi">
-							<select
-								value={hierarchyType}
-								onChange={(e) => {
-									setHierarchyType(e.target.value);
-									setHierarchyId("");
-								}}
-								className={selectClass}
-							>
-								{Object.entries(HIERARCHY_LABELS).map(([value, label]) => (
-									<option key={value} value={value}>
-										{label}
-									</option>
-								))}
-							</select>
-						</FormField>
-
-						<FormField label={HIERARCHY_LABELS[hierarchyType]}>
-							<select value={hierarchyId} onChange={(e) => setHierarchyId(e.target.value)} className={selectClass}>
-								<option value="">Seçiniz</option>
-								{options.map((opt) => (
-									<option key={opt.id} value={opt.id}>
-										{optionLabel(opt)}
-									</option>
-								))}
-							</select>
-						</FormField>
-					</>
+					<FormField label="Hedef Node">
+						<CatalogNodePicker tree={tree} value={nodeId} onChange={setNodeId} />
+					</FormField>
 				)}
 
 				<FormField label="Excel Dosyası (.xlsx)">
@@ -105,7 +55,7 @@ export default function VariantExcelUploadModal({
 					<Button type="button" variant="secondary" onClick={onClose}>
 						Vazgeç
 					</Button>
-					<Button type="submit" isLoading={isLoading} disabled={!file || !hierarchyId}>
+					<Button type="submit" isLoading={isLoading} disabled={!file || !nodeId}>
 						Yükle
 					</Button>
 				</div>
