@@ -5,28 +5,24 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import FormField, { selectClass } from "@/components/ui/FormField";
 import VariantPicker from "@/components/catalog/VariantPicker";
-import { useSubcategories } from "@/hooks/catalog/useSubcategories";
-import { useProducts } from "@/hooks/catalog/useProducts";
+import CatalogNodePicker from "@/components/catalog/CatalogNodePicker";
+import { useCatalogTree } from "@/hooks/catalog/useCatalogNodes";
 import { useAttachImages } from "@/hooks/media/useImages";
 import { notifySuccess, notifyError } from "@/lib/toast";
 
 const TARGET_LABELS = {
-	product: "Ürün",
-	subcategory: "Alt Kategori",
+	node: "Katalog Node",
 	variant: "Varyant",
 };
 
 export default function AttachImagesModal({ open, onClose, imageIds, onDone }) {
-	const [target, setTarget] = useState("product");
+	const [target, setTarget] = useState("node");
 	const [targetId, setTargetId] = useState("");
 	const [selectedVariant, setSelectedVariant] = useState(null);
 
-	const { data: subcategories = [] } = useSubcategories();
-	const { data: products = [] } = useProducts();
+	const { data: tree = [] } = useCatalogTree();
 	const attachImages = useAttachImages();
 
-	const options = target === "subcategory" ? subcategories : target === "product" ? products : [];
-	const optionLabel = (opt) => opt.name ?? opt.title;
 	const resolvedTargetId = target === "variant" ? selectedVariant?.id : targetId;
 
 	const changeTarget = (value) => {
@@ -84,15 +80,8 @@ export default function AttachImagesModal({ open, onClose, imageIds, onDone }) {
 						)}
 					</FormField>
 				) : (
-					<FormField label={TARGET_LABELS[target]}>
-						<select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={selectClass}>
-							<option value="">Seçiniz</option>
-							{options.map((opt) => (
-								<option key={opt.id} value={opt.id}>
-									{optionLabel(opt)}
-								</option>
-							))}
-						</select>
+					<FormField label="Katalog Node">
+						<CatalogNodePicker tree={tree} value={targetId} onChange={setTargetId} />
 					</FormField>
 				)}
 
