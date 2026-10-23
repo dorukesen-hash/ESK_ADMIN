@@ -116,7 +116,21 @@ export default function CatalogPage() {
 		}
 	};
 
-	const detailImages = currentNode?.images ?? [];
+	const detailImages = useMemo(() => currentNode?.images ?? [], [currentNode]);
+
+	// NodeImagesModal's contract is [{ id: <image id>, url }] (it seeds
+	// selectedIds from img.id and re-POSTs those ids verbatim to
+	// /images/attach) - detailImages above is catalog_node_images JOIN rows
+	// ({ id: <join-row id>, imageId, image: { url } }), a different shape
+	// with its own, unrelated id sequence. Feeding join rows to the modal
+	// would both toggle/save the wrong image ids and fail to render
+	// thumbnails in the modal's own "Selected" strip. Memoized so the modal's
+	// own open-effect (which depends on this array) doesn't re-fire every
+	// render on a fresh array reference.
+	const nodeImagesForModal = useMemo(
+		() => detailImages.map((img) => ({ id: img.imageId, url: img.image?.url })),
+		[detailImages]
+	);
 
 	const breadcrumbItems = isSearching
 		? [
@@ -385,7 +399,7 @@ export default function CatalogPage() {
 				onClose={() => setImagesModalOpen(false)}
 				target="node"
 				targetId={currentNode?.id}
-				currentImages={detailImages}
+				currentImages={nodeImagesForModal}
 			/>
 
 			<ConfirmDialog

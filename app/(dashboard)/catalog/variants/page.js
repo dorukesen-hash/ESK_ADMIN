@@ -12,6 +12,8 @@ import {
 import { ChevronUp, ChevronDown, History, Table2, Image as ImageIcon, PencilLine } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useAllVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
+import { useCatalogTree } from "@/hooks/catalog/useCatalogNodes";
+import { findNode } from "@/lib/catalogNodeTree";
 import { ALL_VARIANT_FIELDS, DEFAULT_VISIBLE_KEYS } from "@/components/catalog/variantFieldConfig";
 import VariantGridCell from "@/components/catalog/VariantGridCell";
 import VariantColumnPicker from "@/components/catalog/VariantColumnPicker";
@@ -95,6 +97,7 @@ function pinnedStyle(column) {
 
 export default function VariantsGridPage() {
 	const { data: variants = [], isLoading } = useAllVariants();
+	const { data: catalogTree = [] } = useCatalogTree();
 	// Destructure just the stable mutateAsync function, not the whole mutation
 	// result object - useMutation() returns a NEW object every render (isPending
 	// etc. are render-time state) even though mutateAsync itself is memoized, so
@@ -118,6 +121,9 @@ export default function VariantsGridPage() {
 
 	// getVariantsForAdmin's Category/Subcategory/Product includes are unrestricted
 	// full associations - project down to just the names the grid shows.
+	// nodeName resolves separately against the catalog_node tree - a variant
+	// created through the node-based admin UI has no category/subcategory/
+	// product id at all (see variantFieldConfig.js's comment on this column).
 	const rows = useMemo(
 		() =>
 			variants.map((v) => ({
@@ -125,8 +131,9 @@ export default function VariantsGridPage() {
 				categoryName: v.category?.name ?? "-",
 				subcategoryName: v.subcategory?.name ?? "-",
 				productName: v.product?.title ?? "-",
+				nodeName: (v.nodeId && findNode(catalogTree, v.nodeId)?.name) || "-",
 			})),
-		[variants]
+		[variants, catalogTree]
 	);
 
 	const handleSave = useCallback(
