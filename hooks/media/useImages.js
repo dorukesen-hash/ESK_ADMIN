@@ -34,18 +34,17 @@ export function useDeleteImages() {
 }
 
 // deleteImageConnections runs first server-side, so attaching replaces a
-// target's existing image set rather than appending to it. Subcategories/
-// products/variants embed their own attached images in their list response
-// (subcategory_images/product_images, variant images), so a successful
-// attach must invalidate those lists too or a target's own detail view keeps
-// showing the pre-attach image set until an unrelated refetch happens to run.
+// target's existing image set rather than appending to it. Catalog nodes and
+// variants embed their own attached images in their list response (the tree's
+// node.images, variant images), so a successful attach must invalidate those
+// lists too or a target's own detail view keeps showing the pre-attach image
+// set until an unrelated refetch happens to run.
 export function useAttachImages() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ ids, target, targetId }) => api.post("/images/attach", { ids, target, targetId }),
 		onSuccess: (_data, { target }) => {
-			if (target === "subcategory") queryClient.invalidateQueries({ queryKey: ["subcategories"] });
-			else if (target === "product") queryClient.invalidateQueries({ queryKey: ["products"] });
+			if (target === "node") queryClient.invalidateQueries({ queryKey: ["catalog-tree"] });
 			else if (target === "variant") {
 				queryClient.invalidateQueries({ queryKey: ["variants"] });
 				// The Variants grid fetches everything in one call under a

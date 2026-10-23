@@ -12,6 +12,7 @@ import {
 import { ChevronUp, ChevronDown, History, Table2, Image as ImageIcon, PencilLine } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useAllVariants, useUpdateVariantField } from "@/hooks/catalog/useVariants";
+import { useCatalogTree } from "@/hooks/catalog/useCatalogNodes";
 import { ALL_VARIANT_FIELDS, DEFAULT_VISIBLE_KEYS } from "@/components/catalog/variantFieldConfig";
 import VariantGridCell from "@/components/catalog/VariantGridCell";
 import VariantColumnPicker from "@/components/catalog/VariantColumnPicker";
@@ -95,6 +96,7 @@ function pinnedStyle(column) {
 
 export default function VariantsGridPage() {
 	const { data: variants = [], isLoading } = useAllVariants();
+	const { data: catalogTree = [] } = useCatalogTree();
 	// Destructure just the stable mutateAsync function, not the whole mutation
 	// result object - useMutation() returns a NEW object every render (isPending
 	// etc. are render-time state) even though mutateAsync itself is memoized, so
@@ -117,7 +119,10 @@ export default function VariantsGridPage() {
 	const openImages = useCallback((variant) => setImagesVariant(variant), []);
 
 	// getVariantsForAdmin's Category/Subcategory/Product includes are unrestricted
-	// full associations - project down to just the names the grid shows.
+	// full associations - project down to just the names the grid shows. The
+	// Node column edits v.nodeId directly (see variantFieldConfig.js's comment
+	// on that column) - its own picker cell shows the current node's name, so
+	// no separate display string is computed here.
 	const rows = useMemo(
 		() =>
 			variants.map((v) => ({
@@ -198,6 +203,7 @@ export default function VariantsGridPage() {
 							value={ctx.getValue()}
 							type={field.type}
 							decimal={field.decimal}
+							tree={catalogTree}
 							onSave={(value) => handleSave(ctx.row.original.id, field.key, value)}
 						/>
 					);
@@ -217,11 +223,11 @@ export default function VariantsGridPage() {
 				);
 			},
 			filterFn: field.type === "boolean" ? booleanFilterFn : textFilterFn,
-			size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : 150,
+			size: field.type === "boolean" ? 90 : field.key === "title" ? 280 : field.type === "node" ? 220 : 150,
 		}));
 
 		return [selectColumn, imagesColumn, ...fieldColumns];
-	}, [handleSave, openHistory, openImages]);
+	}, [handleSave, openHistory, openImages, catalogTree]);
 
 	const table = useReactTable({
 		data: rows,

@@ -145,6 +145,15 @@ export const VARIANT_FIELD_GROUPS = [
 			{ key: "categoryName", label: "Category", type: "readonly" },
 			{ key: "subcategoryName", label: "Subcategory", type: "readonly" },
 			{ key: "productName", label: "Product", type: "readonly" },
+			// A variant created through the catalog_node admin UI (Excel upload
+			// with a node target) has no categoryId/subcategoryId/productId at
+			// all, so the three columns above show "-" for it. This column edits
+			// the variant's actual nodeId directly, via a live dropdown over the
+			// catalog tree (type: "node" - see VariantGridCell) rather than a
+			// plain text/number input - both sets of columns stay, since
+			// existing variants still carry real category/subcategory/product
+			// ids and this doesn't migrate them.
+			{ key: "nodeId", label: "Node", type: "node" },
 			{ key: "id", label: "ID", type: "readonly" },
 			{ key: "createdAt", label: "Created At", type: "readonly" },
 			{ key: "updatedAt", label: "Updated At", type: "readonly" },
