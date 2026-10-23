@@ -2,22 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
+import CatalogNodePicker from "./CatalogNodePicker";
 
 const DEBOUNCE_MS = 700;
 
 // Autosave, no Save button: text/number debounce after typing stops (and
-// flush immediately on blur), boolean saves the instant it's toggled. Each
-// cell owns its own draft/status state so typing in one cell never re-renders
-// the other ~thousands of cells in the grid.
-export default function VariantGridCell({ value, type, decimal, onSave }) {
-	const [draft, setDraft] = useState(value ?? (type === "boolean" ? false : ""));
+// flush immediately on blur); boolean and node save the instant they change.
+// Each cell owns its own draft/status state so typing in one cell never
+// re-renders the other ~thousands of cells in the grid.
+export default function VariantGridCell({ value, type, decimal, tree, onSave }) {
+	const [draft, setDraft] = useState(type === "boolean" ? false : value ?? "");
 	const [status, setStatus] = useState("idle"); // idle | saving | saved | error
 	const timerRef = useRef(null);
 	const lastSavedRef = useRef(value);
 	const savedResetRef = useRef(null);
 
 	useEffect(() => {
-		setDraft(value ?? (type === "boolean" ? false : ""));
+		setDraft(type === "boolean" ? value ?? false : value ?? "");
 		lastSavedRef.current = value;
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [value]);
@@ -36,6 +37,9 @@ export default function VariantGridCell({ value, type, decimal, onSave }) {
 			nextValue = rawValue === "" || rawValue === null || rawValue === undefined ? null : Number(rawValue);
 			if (nextValue !== null && Number.isNaN(nextValue)) return;
 			if (nextValue !== null && !decimal) nextValue = Math.round(nextValue);
+		}
+		if (type === "node") {
+			nextValue = rawValue === "" || rawValue === null || rawValue === undefined ? null : Number(rawValue);
 		}
 		if (nextValue === (lastSavedRef.current ?? (type === "boolean" ? false : ""))) return;
 
@@ -57,6 +61,24 @@ export default function VariantGridCell({ value, type, decimal, onSave }) {
 
 	if (type === "readonly") {
 		return <span className="block truncate px-2 py-1.5 text-text-light">{value ?? "-"}</span>;
+	}
+
+	if (type === "node") {
+		return (
+			<div className="relative flex items-center">
+				<CatalogNodePicker
+					tree={tree ?? []}
+					value={draft === null ? "" : String(draft)}
+					onChange={(next) => {
+						setDraft(next);
+						commit(next);
+					}}
+				/>
+				<span className="pointer-events-none absolute right-1.5">
+					<StatusIcon status={status} />
+				</span>
+			</div>
+		);
 	}
 
 	if (type === "boolean") {
